@@ -56,21 +56,21 @@ if 'current_node' not in st.session_state:
     st.session_state.current_node = 'START'
 
 # ==========================================
-# 3. ฟังก์ชันวาดกราฟ (ย่อขนาดและปรับสัดส่วนให้พอดีจอ)
+# 3. ฟังก์ชันวาดกราฟ (จัดระเบียบขนาดและแนวตั้ง)
 # ==========================================
 def generate_graph(active_node, layout_mode):
     dot = graphviz.Digraph('ProcurementFlow', comment='Interactive Flow')
     
-    # 🌟 กำหนดค่า DPI และจัดระยะห่างให้พอดี ไม่ใหญ่เกินไป
-    dot.attr(dpi='100')
+    dot.attr(dpi='120')
     
     if layout_mode == "แนวนอน (S-Curve)":
         dot.attr(rankdir='TB', splines='ortho', nodesep='0.3', ranksep='0.4')
     else:
+        # แนวตั้ง: ปรับระยะห่างให้พอดี ไม่ยาวหรือห่างจนเกินไป
         dot.attr(rankdir='TB', splines='polyline', nodesep='0.4', ranksep='0.4')
         
     dot.attr('node', fontname='Segoe UI, Tahoma, Arial Unicode MS, sans-serif')
-    dot.attr('edge', color='#BDC3C7', penwidth='2', fontname='Segoe UI, Tahoma', fontsize='10')
+    dot.attr('edge', color='#BDC3C7', penwidth='2', fontname='Segoe UI, Tahoma', fontsize='9')
 
     def get_node_style(node_id, base_color, fill_color, shape, style):
         is_active = (node_id == active_node)
@@ -95,13 +95,13 @@ def generate_graph(active_node, layout_mode):
         eng_title = eng_title.replace("&", "&amp;")
         th_title = th_title.replace("&", "&amp;")
         
-        # 🌟 ปรับขนาดฟอนต์ให้พอดีตา (ไม่ใหญ่เกินไป) และจัดกึ่งกลาง
-        label = f'''<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="3">
-        <TR><TD ALIGN="CENTER"><FONT COLOR="{c_num}" POINT-SIZE="9"><B>{stage_num}</B></FONT></TD></TR>
-        <TR><TD ALIGN="CENTER"><FONT COLOR="{c_eng}" POINT-SIZE="11"><B>{eng_title}</B></FONT></TD></TR>
-        <TR><TD ALIGN="CENTER"><FONT COLOR="{c_th}" POINT-SIZE="9">{th_title}</FONT></TD></TR>
+        # 🌟 จัดกึ่งกลางด้วย ALIGN="CENTER" และปรับขนาดฟอนต์ให้พอดีตา (เล็กกำลังดี)
+        label = f'''<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="2">
+        <TR><TD ALIGN="CENTER"><FONT COLOR="{c_num}" POINT-SIZE="8"><B>{stage_num}</B></FONT></TD></TR>
+        <TR><TD ALIGN="CENTER"><FONT COLOR="{c_eng}" POINT-SIZE="10"><B>{eng_title}</B></FONT></TD></TR>
+        <TR><TD ALIGN="CENTER"><FONT COLOR="{c_th}" POINT-SIZE="8">{th_title}</FONT></TD></TR>
         </TABLE>>'''
-        dot.node(node_id, label, shape='box', style='filled,rounded', color=c_box, fillcolor=f_box, penwidth=pw, margin='0.15,0.1')
+        dot.node(node_id, label, shape='box', style='filled,rounded', color=c_box, fillcolor=f_box, penwidth=pw, margin='0.1,0.08')
 
     create_stage_node('STAGE_01', 'STAGE 01', 'Draft SOR', 'จัดทำข้อกำหนดความต้องการ (SOR)')
     create_stage_node('STAGE_02', 'STAGE 02', 'Submit PR', 'สร้างใบขอซื้อ (PR) ในระบบ')
@@ -116,10 +116,10 @@ def generate_graph(active_node, layout_mode):
     create_stage_node('STAGE_11', 'STAGE 11', 'KPI & Closeout', 'ประเมินผลงานและปิดโครงการ')
 
     decs = [
-        ('DEC_01', '<<FONT POINT-SIZE="10"><B>SOR &amp;<BR/>Budget<BR/>Approved?</B></FONT>>'), 
-        ('DEC_02', '<<FONT POINT-SIZE="10"><B>PR<BR/>Approved?</B></FONT>>'),
-        ('DEC_03', '<<FONT POINT-SIZE="10"><B>Technical<BR/>Pass<BR/>SOR?</B></FONT>>'), 
-        ('DEC_04', '<<FONT POINT-SIZE="10"><B>Inspection<BR/>on<BR/>FAT/SAT<BR/>Pass?</B></FONT>>')
+        ('DEC_01', '<<FONT POINT-SIZE="9"><B>SOR &amp;<BR/>Budget<BR/>Approved?</B></FONT>>'), 
+        ('DEC_02', '<<FONT POINT-SIZE="9"><B>PR<BR/>Approved?</B></FONT>>'),
+        ('DEC_03', '<<FONT POINT-SIZE="9"><B>Technical<BR/>Pass<BR/>SOR?</B></FONT>>'), 
+        ('DEC_04', '<<FONT POINT-SIZE="9"><B>Inspection<BR/>on<BR/>FAT/SAT<BR/>Pass?</B></FONT>>')
     ]
     for d_id, d_lbl in decs:
         dot.node(d_id, d_lbl, **get_node_style(d_id, '#F39C12', '#FEF9E7', 'diamond', 'filled'))
@@ -135,9 +135,9 @@ def generate_graph(active_node, layout_mode):
         pw = '2' if is_active else '1.2'
         c = '#F39C12' if is_active else '#E74C3C'
         f = '#FEF9E7' if is_active else '#FDEDEC'
-        label = f'''<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="3">
-        <TR><TD ALIGN="CENTER"><FONT COLOR="{c}" POINT-SIZE="10"><B>{e_title}</B></FONT></TD></TR>
-        <TR><TD ALIGN="CENTER"><FONT COLOR="#C0392B" POINT-SIZE="9">{e_th}</FONT></TD></TR>
+        label = f'''<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="2">
+        <TR><TD ALIGN="CENTER"><FONT COLOR="{c}" POINT-SIZE="9"><B>{e_title}</B></FONT></TD></TR>
+        <TR><TD ALIGN="CENTER"><FONT COLOR="#C0392B" POINT-SIZE="8">{e_th}</FONT></TD></TR>
         </TABLE>>'''
         dot.node(e_id, label, shape='rect', style='filled,rounded,dashed', color=c, fillcolor=f, penwidth=pw)
 
@@ -167,23 +167,40 @@ def generate_graph(active_node, layout_mode):
         dot.edge('STAGE_07', 'STAGE_08', weight='100')
 
     else:
-        # แนวตั้ง
-        dot.edge('START', 'STAGE_01')
-        dot.edge('STAGE_01', 'DEC_01')
-        dot.edge('DEC_01', 'STAGE_02', label=' Yes', fontcolor='#27AE60')
-        dot.edge('STAGE_02', 'DEC_02')
-        dot.edge('DEC_02', 'STAGE_03', label=' Yes', fontcolor='#27AE60')
-        dot.edge('STAGE_03', 'STAGE_04')
-        dot.edge('STAGE_04', 'DEC_03')
-        dot.edge('DEC_03', 'STAGE_05', label=' Yes', fontcolor='#27AE60')
-        dot.edge('STAGE_05', 'STAGE_06')
-        dot.edge('STAGE_06', 'STAGE_07')
-        dot.edge('STAGE_07', 'STAGE_08')
-        dot.edge('STAGE_08', 'DEC_04')
-        dot.edge('DEC_04', 'STAGE_09', label=' Yes', fontcolor='#27AE60')
-        dot.edge('STAGE_09', 'STAGE_10')
-        dot.edge('STAGE_10', 'STAGE_11')
-        dot.edge('STAGE_11', 'END')
+        # แนวตั้ง: จัดระเบียบให้อยู่ในแกนกลาง และจัดกล่อง No ให้อยู่ด้านข้างในระดับเดียวกัน
+        with dot.subgraph() as r1:
+            r1.attr(rank='same')
+            r1.node('DEC_01')
+            r1.node('EXC_01')
+        with dot.subgraph() as r2:
+            r2.attr(rank='same')
+            r2.node('DEC_02')
+            r2.node('EXC_02')
+        with dot.subgraph() as r3:
+            r3.attr(rank='same')
+            r3.node('DEC_03')
+            r3.node('EXC_03')
+        with dot.subgraph() as r4:
+            r4.attr(rank='same')
+            r4.node('DEC_04')
+            r4.node('EXC_04')
+
+        dot.edge('START', 'STAGE_01', weight='10')
+        dot.edge('STAGE_01', 'DEC_01', weight='10')
+        dot.edge('DEC_01', 'STAGE_02', label=' Yes', fontcolor='#27AE60', weight='10')
+        dot.edge('STAGE_02', 'DEC_02', weight='10')
+        dot.edge('DEC_02', 'STAGE_03', label=' Yes', fontcolor='#27AE60', weight='10')
+        dot.edge('STAGE_03', 'STAGE_04', weight='10')
+        dot.edge('STAGE_04', 'DEC_03', weight='10')
+        dot.edge('DEC_03', 'STAGE_05', label=' Yes', fontcolor='#27AE60', weight='10')
+        dot.edge('STAGE_05', 'STAGE_06', weight='10')
+        dot.edge('STAGE_06', 'STAGE_07', weight='10')
+        dot.edge('STAGE_07', 'STAGE_08', weight='10')
+        dot.edge('STAGE_08', 'DEC_04', weight='10')
+        dot.edge('DEC_04', 'STAGE_09', label=' Yes', fontcolor='#27AE60', weight='10')
+        dot.edge('STAGE_09', 'STAGE_10', weight='10')
+        dot.edge('STAGE_10', 'STAGE_11', weight='10')
+        dot.edge('STAGE_11', 'END', weight='10')
 
     # เส้นทาง Exception (No)
     dot.edge('DEC_01', 'EXC_01', label=' No', color='#E74C3C', fontcolor='#E74C3C', style='bold')
@@ -304,5 +321,4 @@ with st.sidebar:
     )
 
 # --- ส่วนของพื้นที่หลัก (MAIN AREA) ---
-# 🌟 ใช้ use_container_width=True เพื่อให้ Streamlit ปรับขนาดภาพลงมาพอดีหน้าจอสวยงาม
 st.graphviz_chart(generate_graph(current_node_id, layout_choice), use_container_width=True)
