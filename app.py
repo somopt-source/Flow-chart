@@ -1,115 +1,104 @@
 import streamlit as st
 import graphviz
 
-# ตั้งค่าหน้า Streamlit
-st.set_page_config(page_title="Procurement Process Flowchart Map", layout="wide")
+# 1. ตั้งค่าหน้า Streamlit และ Header แบบมืออาชีพ
+st.set_page_config(page_title="Procurement Process Flowchart", layout="wide")
 
-st.title("Procurement Process Flowchart Map (SOR-to-Pay)")
-st.caption("สัญลักษณ์: ■ สี่เหลี่ยม (Process) | ◆ สี่เหลี่ยมขนมเปียกปูน (Decision) | ▲▼ สามเหลี่ยม (Exception / Loopback)")
+st.markdown("""
+<div style='text-align: center; margin-bottom: 30px;'>
+    <h2 style='color: #1B2631; margin-bottom: 5px; font-weight: bold;'>Procurement Process Flowchart (SOR-to-Pay)</h2>
+    <p style='color: #7F8C8D; font-size: 18px;'>กระบวนการจัดซื้อจัดจ้างเริ่มต้นจาก Statement of Requirements (SOR)</p>
+</div>
+""", unsafe_allow_html=True)
 
-# สร้าง Graph แบบ Directed Graph
-dot = graphviz.Digraph('ProcurementFlowchart', comment='SOR-to-Pay Flowchart')
+# 2. สร้าง Graph และตั้งค่าพื้นฐาน
+dot = graphviz.Digraph('ProcurementFlowchart', comment='SOR-to-Pay')
+# splines='ortho' ทำให้เส้นหักศอกฉาก / nodesep, ranksep คุมระยะห่าง
+dot.attr(rankdir='TB', splines='ortho', nodesep='0.5', ranksep='0.6')
+dot.attr('node', fontname='Tahoma, Arial, sans-serif')
+dot.attr('edge', color='#95A5A6', penwidth='3', arrowsize='0.8')
 
-# ตั้งค่าทั่วไปสำหรับกราฟ (จัดเรียงบนลงล่าง, เส้นแบบหักมุม)
-dot.attr(rankdir='TB', splines='ortho', nodesep='0.5', ranksep='0.5')
-# แนะนำให้ใช้ฟอนต์ Tahoma หรือ Arial เพื่อให้ภาษาไทยไม่เพี้ยน
-dot.attr('node', fontname='Tahoma, Arial, sans-serif', fontsize='12')
-
-# ==========================================
-# 1. นิยามรูปแบบของ Node (Styles)
-# ==========================================
-
-# Start Node
-dot.node('START', 'START\n(เริ่มต้น)', shape='box', style='filled,bold', color='#2ECC71', fillcolor='#E8F8F5', fontcolor='#196F3D')
-
-# Process Nodes (STAGE 01 - 11) - กรอบสีน้ำเงิน
-stages = {
-    'STAGE_01': "■ STAGE 01\nDraft SOR\nจัดทำข้อกำหนดความต้องการ",
-    'STAGE_02': "■ STAGE 02\nSubmit PR in ERP\nเปิดใบขอซื้อในระบบ ERP",
-    'STAGE_03': "■ STAGE 03\nIssue RFQ / RFP with SOR\nส่งเทียบราคา/ประมูลแนบ SOR",
-    'STAGE_04': "■ STAGE 04\nBids & Proposals\nผู้ขายยื่นซองเทคนิค+ราคา",
-    'STAGE_05': "■ STAGE 05\nCommercial Eval\nเจรจาต่อรอง & สรุปราคา",
-    'STAGE_06': "■ STAGE 06\nIssue PO / Contract\nออกใบสั่งซื้อ/สัญญาตาม SOR",
-    'STAGE_07': "■ STAGE 07\nSigned Agreement\nคู่ค้าลงนามสัญญาผูกพัน",
-    'STAGE_08': "■ STAGE 08\nExecution & Delivery\nดำเนินงาน / ส่งมอบตามงวด",
-    'STAGE_09': "■ STAGE 09\n3-Way Matching\nตรวจ PO + ตรวจรับ + Invoice",
-    'STAGE_10': "■ STAGE 10\nPayment\nโอนจ่ายเงินตามงวด/เครดิต",
-    'STAGE_11': "■ STAGE 11\nKPI & Closeout\nประเมินผลงาน & ปิดโครงการ"
-}
-for name, label in stages.items():
-    dot.node(name, label, shape='box', style='filled', color='#0073C2', fillcolor='#EBF5FB', penwidth='2', margin='0.2')
-
-# Decision Nodes (สี่เหลี่ยมขนมเปียกปูน - ใช้ shape='diamond') 
-# เพิ่ม \n ตัดบรรทัดเพื่อให้ขนมเปียกปูนไม่ยืดออกข้างมากเกินไป
-decisions = {
-    'DEC_01': "◆ SOR & Budget\nApproved?\n[ ทบทวนสเปก & งบ ]",
-    'DEC_02': "◆ PR Approved?\n[ อนุมัติใบขอซื้อ ]",
-    'DEC_03': "◆ Technical\nPass SOR?\n[ ตรวจสเปกเทคนิค ]",
-    'DEC_04': "◆ Inspection\nFAT/SAT Pass?\n[ ตรวจรับตามเกณฑ์ ]"
-}
-for name, label in decisions.items():
-    dot.node(name, label, shape='diamond', style='filled', color='#D35400', fillcolor='#FEF9E7', penwidth='2', fontcolor='#A04000')
-
-# Exception / Loopback Nodes (สามเหลี่ยม - ใช้ shape='triangle')
-# เพิ่ม \n ตัดบรรทัดเพื่อให้สามเหลี่ยมสมดุล
-exceptions = {
-    'REV_01': "▲ (Revise)\n[ แก้ไข SOR /\nงบประมาณ ]",
-    'REJ_02': "▲ (Reject)\n[ ปฏิเสธ /\nส่งกลับ PR ]",
-    'DISQ_03': "▼ (Disqualify)\n[ ตัดสิทธิ์\nไม่เปิดซองราคา ]",
-    'CLAIM_04': "▼ (Claim/Penalty)\n[ แจ้งแก้ไข /\nเคลม / ปรับ ]"
-}
-for name, label in exceptions.items():
-    dot.node(name, label, shape='triangle', style='filled', color='#E74C3C', fillcolor='#FDEDEC', penwidth='2', fontcolor='#C0392B')
-
-# End Node
-dot.node('END', 'END\n(สิ้นสุด)', shape='box', style='filled,bold', color='#E74C3C', fillcolor='#FDEDEC', fontcolor='#C0392B')
-
+# ฟังก์ชันช่วยสร้าง HTML Label สำหรับ STAGE ให้ดูสวยงาม
+def create_stage_node(node_id, stage_num, eng_title, th_title):
+    label = f'''<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="2">
+    <TR><TD><FONT COLOR="#3498DB" POINT-SIZE="10"><B>{stage_num}</B></FONT></TD></TR>
+    <TR><TD><FONT POINT-SIZE="12" COLOR="#1C2833"><B>{eng_title}</B></FONT></TD></TR>
+    <TR><TD><FONT COLOR="#7F8C8D" POINT-SIZE="10">{th_title}</FONT></TD></TR>
+    </TABLE>>'''
+    dot.node(node_id, label, shape='box', style='filled,rounded', 
+             color='#3498DB', fillcolor='#F4FAFF', penwidth='2.5', margin='0.15')
 
 # ==========================================
-# 2. การเชื่อมโยงเส้น (Edges & Flow)
+# 3. กำหนด Nodes ทั้งหมดตามภาพ
 # ==========================================
 
-# กระบวนการหลัก
-dot.edge('START', 'STAGE_01')
-dot.edge('STAGE_01', 'DEC_01')
+# Start & End
+dot.node('START', '<B>START</B>', shape='box', style='filled,rounded', 
+         color='#2ECC71', fillcolor='#EAFAF1', fontcolor='#1E8449', penwidth='2.5', width='1', height='0.6')
+dot.node('END', '<B>END</B>', shape='box', style='filled,rounded', 
+         color='#E74C3C', fillcolor='#FDEDEC', fontcolor='#C0392B', penwidth='2.5', width='1', height='0.6')
 
-# DEC_01 (SOR & Budget)
-dot.edge('DEC_01', 'REV_01', label='No: ปรับปรุง', color='#E74C3C', fontcolor='#E74C3C')
-dot.edge('REV_01', 'STAGE_01', style='dashed', constraint='false')
-dot.edge('DEC_01', 'STAGE_02', label='(Yes)', color='#2ECC71', fontcolor='#2ECC71')
+# แถวที่ 1
+create_stage_node('STAGE_01', 'STAGE 01', 'Draft SOR', 'จัดทำข้อกำหนดความต้องการ')
+dot.node('DEC_01', '<B>SOR &<BR/>Budget<BR/>Approved?</B>', shape='diamond', style='filled', 
+         color='#F39C12', fillcolor='#FEF9E7', penwidth='2.5', fontcolor='#B9770E')
+create_stage_node('STAGE_02', 'STAGE 02', 'Submit PR', 'เปิดใบขอซื้อในระบบ ERP')
+dot.node('DEC_02', '<B>PR<BR/>Approved?</B>', shape='diamond', style='filled', 
+         color='#F39C12', fillcolor='#FEF9E7', penwidth='2.5', fontcolor='#B9770E')
+create_stage_node('STAGE_03', 'STAGE 03', 'Issue RFQ / RFP', 'ส่งเทียบราคา/ประมูลแนบ SOR')
 
-# DEC_02 (PR Approved)
-dot.edge('STAGE_02', 'DEC_02')
-dot.edge('DEC_02', 'REJ_02', label='No: ส่งกลับ', color='#E74C3C', fontcolor='#E74C3C')
-dot.edge('REJ_02', 'STAGE_01', style='dashed', constraint='false')
-dot.edge('DEC_02', 'STAGE_03', label='(Yes)', color='#2ECC71', fontcolor='#2ECC71')
+# แถวที่ 2
+create_stage_node('STAGE_04', 'STAGE 04', 'Bids / Proposals', 'ผู้ขายยื่นข้อเสนอเทคนิค+ราคา')
+dot.node('DEC_03', '<B>Technical<BR/>Pass<BR/>SOR?</B>', shape='diamond', style='filled', 
+         color='#F39C12', fillcolor='#FEF9E7', penwidth='2.5', fontcolor='#B9770E')
+create_stage_node('STAGE_05', 'STAGE 05', 'Commercial Eval', 'เจรจาต่อรอง & สรุปราคา')
+create_stage_node('STAGE_06', 'STAGE 06', 'Issue PO / Contract', 'ออกใบสั่งซื้อ/สัญญาตาม SOR')
+create_stage_node('STAGE_07', 'STAGE 07', 'Signed Agreement', 'คู่ค้าลงนามผูกพันสัญญา')
 
-# STAGE 03 ไป 04
-dot.edge('STAGE_03', 'STAGE_04')
-dot.edge('STAGE_04', 'DEC_03')
-
-# DEC_03 (Technical Pass)
-dot.edge('DEC_03', 'DISQ_03', label='No: ตกสเปก', color='#E74C3C', fontcolor='#E74C3C')
-dot.edge('DEC_03', 'STAGE_05', label='(Yes)', color='#2ECC71', fontcolor='#2ECC71')
-
-# STAGE 05 ไป 08
-dot.edge('STAGE_05', 'STAGE_06')
-dot.edge('STAGE_06', 'STAGE_07')
-dot.edge('STAGE_07', 'STAGE_08')
-dot.edge('STAGE_08', 'DEC_04')
-
-# DEC_04 (Inspection)
-dot.edge('DEC_04', 'CLAIM_04', label='No: ไม่ผ่านเกณฑ์', color='#E74C3C', fontcolor='#E74C3C')
-dot.edge('CLAIM_04', 'STAGE_08', style='dashed', constraint='false')
-dot.edge('DEC_04', 'STAGE_09', label='(Yes)', color='#2ECC71', fontcolor='#2ECC71')
-
-# STAGE 09 ไปสิ้นสุด
-dot.edge('STAGE_09', 'STAGE_10')
-dot.edge('STAGE_10', 'STAGE_11')
-dot.edge('STAGE_11', 'END')
-
+# แถวที่ 3
+create_stage_node('STAGE_08', 'STAGE 08', 'Execution & Delivery', 'ส่งมอบงานตามงวดใน SOR')
+dot.node('DEC_04', '<B>Inspection<BR/>on<BR/>FAT/SAT<BR/>Pass?</B>', shape='diamond', style='filled', 
+         color='#F39C12', fillcolor='#FEF9E7', penwidth='2.5', fontcolor='#B9770E')
+create_stage_node('STAGE_09', 'STAGE 09', '3-Way Matching', 'ตรวจ PO + ตรวจรับ + Invoice')
+create_stage_node('STAGE_10', 'STAGE 10', 'Payment', 'จ่ายเงินตามงวด/เครดิตเทอม')
+create_stage_node('STAGE_11', 'STAGE 11', 'KPI & Closeout', 'ประเมินผลงาน & ปิดโครงการ')
 
 # ==========================================
-# 3. แสดงผลบน Streamlit
+# 4. การเชื่อมโยงเส้น (บังคับให้ออกมาเป็นรูปตัว S)
+# ==========================================
+
+# กลุ่มที่ 1: วิ่งจาก ซ้าย ไป ขวา
+with dot.subgraph() as s1:
+    s1.attr(rank='same')
+    s1.edge('START', 'STAGE_01')
+    s1.edge('STAGE_01', 'DEC_01')
+    s1.edge('DEC_01', 'STAGE_02')
+    s1.edge('STAGE_02', 'DEC_02')
+    s1.edge('DEC_02', 'STAGE_03')
+
+# กลุ่มที่ 2: วิ่งจาก ขวา กลับมา ซ้าย (ใช้เทคนิค dir='back')
+with dot.subgraph() as s2:
+    s2.attr(rank='same')
+    # กำหนดเรียงลำดับจากซ้ายไปขวา (ตาม Layout) แต่ลูกศรจะวิ่งย้อนทาง
+    s2.edge('STAGE_07', 'STAGE_06', dir='back')
+    s2.edge('STAGE_06', 'STAGE_05', dir='back')
+    s2.edge('STAGE_05', 'DEC_03', dir='back')
+    s2.edge('DEC_03', 'STAGE_04', dir='back')
+
+# กลุ่มที่ 3: วิ่งจาก ซ้าย ไป ขวา
+with dot.subgraph() as s3:
+    s3.attr(rank='same')
+    s3.edge('STAGE_08', 'DEC_04')
+    s3.edge('DEC_04', 'STAGE_09')
+    s3.edge('STAGE_09', 'STAGE_10')
+    s3.edge('STAGE_10', 'STAGE_11')
+    s3.edge('STAGE_11', 'END')
+
+# ทางเชื่อมระหว่างชั้น (ดึงขอบให้ชิดกันด้วย weight)
+dot.edge('STAGE_03', 'STAGE_04', weight='100')
+dot.edge('STAGE_07', 'STAGE_08', weight='100')
+
+# ==========================================
+# 5. แสดงผลบน Streamlit
 # ==========================================
 st.graphviz_chart(dot, use_container_width=True)
