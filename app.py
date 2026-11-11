@@ -4,7 +4,7 @@ import pandas as pd
 import io
 
 # ==========================================
-# 1. ตั้งค่าหน้า Streamlit (ย้ายแผงควบคุมไป Sidebar)
+# 1. ตั้งค่าหน้า Streamlit 
 # ==========================================
 st.set_page_config(
     page_title="Interactive Procurement Flow", 
@@ -56,12 +56,17 @@ if 'current_node' not in st.session_state:
     st.session_state.current_node = 'START'
 
 # ==========================================
-# 3. ฟังก์ชันวาดกราฟ (รองรับ แนวนอน และ แนวตั้ง)
+# 3. ฟังก์ชันวาดกราฟ (อัปเดตแก้บั๊ก Graphviz Crash)
 # ==========================================
 def generate_graph(active_node, layout_mode):
     dot = graphviz.Digraph('ProcurementFlow', comment='Interactive Flow')
     
-    dot.attr(rankdir='TB', splines='ortho', nodesep='0.4', ranksep='0.6')
+    # 🌟 จุดแก้ไข: ใช้ 'polyline' สำหรับแนวตั้ง เพื่อป้องกัน Graphviz Engine คำนวณเส้นฉากพลาดจนเซิร์ฟเวอร์ Crash
+    if layout_mode == "แนวนอน (S-Curve)":
+        dot.attr(rankdir='TB', splines='ortho', nodesep='0.4', ranksep='0.6')
+    else:
+        dot.attr(rankdir='TB', splines='polyline', nodesep='0.5', ranksep='0.5')
+        
     dot.attr('node', fontname='Tahoma, Arial Unicode MS, sans-serif')
     dot.attr('edge', color='#BDC3C7', penwidth='2', fontname='Tahoma', fontsize='10')
 
@@ -207,19 +212,18 @@ def generate_excel():
 
 
 # ==========================================
-# 5. ออกแบบ UI 
+# 5. ออกแบบ UI (พื้นที่หลัก และ Sidebar)
 # ==========================================
 
 current_node_id = st.session_state.current_node
 node_info = FLOW_DATA.get(current_node_id, {})
 
-# --- จุดแก้ไขสำคัญ: ย้าย Layout Choice ขึ้นมาก่อน Sidebar ---
+# --- รับค่ารูปแบบ Layout ขึ้นมาก่อน ---
 layout_choice = st.radio(
     "🔄 เลือกรูปแบบการแสดงผลกราฟ (Layout Mode):",
     options=["แนวนอน (S-Curve)", "แนวตั้ง (Top-to-Bottom)"],
     horizontal=True
 )
-
 st.markdown("<hr style='margin-top: 5px; margin-bottom: 20px;'>", unsafe_allow_html=True)
 
 # --- ส่วนของ SIDEBAR (แผงควบคุมด้านซ้าย) ---
@@ -259,7 +263,7 @@ with st.sidebar:
     st.markdown("---")
     st.markdown("### 📥 ดาวน์โหลด")
     
-    # --- ดึงกราฟสำหรับดาวน์โหลด โดยใช้ layout_choice ล่าสุดที่เลือก ---
+    # ดึงกราฟสำหรับดาวน์โหลด (อ้างอิงจาก layout ล่าสุด)
     clean_graph = generate_graph(None, layout_choice)
     
     try:
@@ -272,7 +276,7 @@ with st.sidebar:
             use_container_width=True
         )
     except Exception as e:
-        st.warning("⚠️ เซิร์ฟเวอร์ไม่พร้อมสำหรับสร้างไฟล์ PNG")
+        st.warning(f"⚠️ ไม่สามารถสร้างไฟล์ PNG ได้ (Error: {e})")
 
     try:
         svg_data = clean_graph.pipe(format='svg')
@@ -284,7 +288,7 @@ with st.sidebar:
             use_container_width=True
         )
     except Exception as e:
-        st.warning("⚠️ เซิร์ฟเวอร์ไม่พร้อมสำหรับสร้างไฟล์ SVG")
+        st.warning(f"⚠️ ไม่สามารถสร้างไฟล์ SVG ได้ (Error: {e})")
     
     excel_data = generate_excel()
     st.download_button(
@@ -296,5 +300,4 @@ with st.sidebar:
     )
 
 # --- ส่วนของพื้นที่หลัก (MAIN AREA) ---
-# วาดกราฟบนพื้นที่หลัก (แสดงตามรูปแบบที่เลือก)
 st.graphviz_chart(generate_graph(current_node_id, layout_choice), use_container_width=True)
