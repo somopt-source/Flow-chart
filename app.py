@@ -56,26 +56,27 @@ if 'current_node' not in st.session_state:
     st.session_state.current_node = 'START'
 
 # ==========================================
-# 3. ฟังก์ชันวาดกราฟ (ปรับขนาดและช่องไฟให้อ่านง่าย)
+# 3. ฟังก์ชันวาดกราฟ (ปรับสเกลให้อ่านง่าย พอดีจอ)
 # ==========================================
 def generate_graph(active_node, layout_mode):
-    # ปรับขนาดภาพรวม (dpi) ให้ภาพคมชัดขึ้นเมื่อขยาย
     dot = graphviz.Digraph('ProcurementFlow', comment='Interactive Flow')
-    dot.attr(dpi='150')
+    
+    # 🌟 การตั้งค่าขนาดให้พอดีจอและคมชัด
+    dot.attr(dpi='200') # เพิ่มความคมชัด
+    dot.attr(size='12,12!') # บังคับขนาดเริ่มต้นของภาพ (หน่วยเป็นนิ้ว)
+    dot.attr(ratio='compress') # บีบอัดให้พอดีโดยคงสัดส่วน
     
     if layout_mode == "แนวนอน (S-Curve)":
-        # เพิ่มระยะห่างแนวนอน (nodesep) ให้กล่องไม่เบียดกัน
-        dot.attr(rankdir='TB', splines='ortho', nodesep='0.6', ranksep='0.8')
+        dot.attr(rankdir='TB', splines='ortho', nodesep='0.5', ranksep='0.6')
     else:
-        # เพิ่มระยะห่างแนวตั้ง (ranksep) ให้มีพื้นที่ลากเส้นสวยงาม
-        dot.attr(rankdir='TB', splines='polyline', nodesep='0.8', ranksep='0.7')
+        dot.attr(rankdir='TB', splines='polyline', nodesep='0.6', ranksep='0.6')
         
     dot.attr('node', fontname='Segoe UI, Tahoma, Arial Unicode MS, sans-serif')
-    dot.attr('edge', color='#BDC3C7', penwidth='2.5', fontname='Segoe UI, Tahoma', fontsize='12')
+    dot.attr('edge', color='#BDC3C7', penwidth='3', fontname='Segoe UI, Tahoma', fontsize='12')
 
     def get_node_style(node_id, base_color, fill_color, shape, style):
         is_active = (node_id == active_node)
-        pw = '5' if is_active else '2'
+        pw = '5' if is_active else '2.5'
         c = '#F39C12' if is_active else base_color
         f = '#FEF9E7' if is_active else fill_color
         return {'shape': shape, 'style': style, 'color': c, 'fillcolor': f, 'penwidth': pw}
@@ -96,13 +97,13 @@ def generate_graph(active_node, layout_mode):
         eng_title = eng_title.replace("&", "&amp;")
         th_title = th_title.replace("&", "&amp;")
         
-        # 🌟 ปรับขนาดฟอนต์ให้ใหญ่ขึ้น (11, 15, 12) และเพิ่มช่องไฟ (CELLPADDING)
-        label = f'''<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="6">
-        <TR><TD><FONT COLOR="{c_num}" POINT-SIZE="11"><B>{stage_num}</B></FONT></TD></TR>
-        <TR><TD><FONT COLOR="{c_eng}" POINT-SIZE="15"><B>{eng_title}</B></FONT></TD></TR>
-        <TR><TD><FONT COLOR="{c_th}" POINT-SIZE="12">{th_title}</FONT></TD></TR>
+        # ปรับฟอนต์ให้ใหญ่ขึ้น เพื่อให้อ่านง่ายเมื่อถูก Streamlit ย่อพอดีจอ
+        label = f'''<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="4">
+        <TR><TD><FONT COLOR="{c_num}" POINT-SIZE="12"><B>{stage_num}</B></FONT></TD></TR>
+        <TR><TD><FONT COLOR="{c_eng}" POINT-SIZE="16"><B>{eng_title}</B></FONT></TD></TR>
+        <TR><TD><FONT COLOR="{c_th}" POINT-SIZE="13">{th_title}</FONT></TD></TR>
         </TABLE>>'''
-        dot.node(node_id, label, shape='box', style='filled,rounded', color=c_box, fillcolor=f_box, penwidth=pw, margin='0.25,0.15')
+        dot.node(node_id, label, shape='box', style='filled,rounded', color=c_box, fillcolor=f_box, penwidth=pw, margin='0.3,0.2')
 
     create_stage_node('STAGE_01', 'STAGE 01', 'Draft SOR', 'จัดทำข้อกำหนดความต้องการ (SOR)')
     create_stage_node('STAGE_02', 'STAGE 02', 'Submit PR', 'สร้างใบขอซื้อ (PR) ในระบบ')
@@ -117,10 +118,10 @@ def generate_graph(active_node, layout_mode):
     create_stage_node('STAGE_11', 'STAGE 11', 'KPI & Closeout', 'ประเมินผลงานและปิดโครงการ')
 
     decs = [
-        ('DEC_01', '<<FONT POINT-SIZE="13"><B>SOR &amp;<BR/>Budget<BR/>Approved?</B></FONT>>'), 
-        ('DEC_02', '<<FONT POINT-SIZE="13"><B>PR<BR/>Approved?</B></FONT>>'),
-        ('DEC_03', '<<FONT POINT-SIZE="13"><B>Technical<BR/>Pass<BR/>SOR?</B></FONT>>'), 
-        ('DEC_04', '<<FONT POINT-SIZE="13"><B>Inspection<BR/>on<BR/>FAT/SAT<BR/>Pass?</B></FONT>>')
+        ('DEC_01', '<<FONT POINT-SIZE="14"><B>SOR &amp;<BR/>Budget<BR/>Approved?</B></FONT>>'), 
+        ('DEC_02', '<<FONT POINT-SIZE="14"><B>PR<BR/>Approved?</B></FONT>>'),
+        ('DEC_03', '<<FONT POINT-SIZE="14"><B>Technical<BR/>Pass<BR/>SOR?</B></FONT>>'), 
+        ('DEC_04', '<<FONT POINT-SIZE="14"><B>Inspection<BR/>on<BR/>FAT/SAT<BR/>Pass?</B></FONT>>')
     ]
     for d_id, d_lbl in decs:
         dot.node(d_id, d_lbl, **get_node_style(d_id, '#F39C12', '#FEF9E7', 'diamond', 'filled'))
@@ -136,9 +137,9 @@ def generate_graph(active_node, layout_mode):
         pw = '3' if is_active else '2'
         c = '#F39C12' if is_active else '#E74C3C'
         f = '#FEF9E7' if is_active else '#FDEDEC'
-        label = f'''<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="5">
-        <TR><TD><FONT COLOR="{c}" POINT-SIZE="12"><B>{e_title}</B></FONT></TD></TR>
-        <TR><TD><FONT COLOR="#C0392B" POINT-SIZE="11">{e_th}</FONT></TD></TR>
+        label = f'''<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="4">
+        <TR><TD><FONT COLOR="{c}" POINT-SIZE="13"><B>{e_title}</B></FONT></TD></TR>
+        <TR><TD><FONT COLOR="#C0392B" POINT-SIZE="12">{e_th}</FONT></TD></TR>
         </TABLE>>'''
         dot.node(e_id, label, shape='rect', style='filled,rounded,dashed', color=c, fillcolor=f, penwidth=pw)
 
@@ -218,6 +219,7 @@ def generate_excel():
         df.to_excel(writer, index=False, sheet_name='Procurement Process')
     return output.getvalue()
 
+
 # ==========================================
 # 5. ออกแบบ UI 
 # ==========================================
@@ -232,7 +234,7 @@ layout_choice = st.radio(
 )
 st.markdown("<hr style='margin-top: 5px; margin-bottom: 20px;'>", unsafe_allow_html=True)
 
-# --- ส่วนของ SIDEBAR (แผงควบคุมด้านซ้าย) ---
+# --- ส่วนของ SIDEBAR ---
 with st.sidebar:
     st.markdown("### 📍 แผงควบคุม (Control Panel)")
     st.info(f"**สถานะปัจจุบัน:**\n### {node_info.get('title', '')}")
@@ -304,8 +306,5 @@ with st.sidebar:
     )
 
 # --- ส่วนของพื้นที่หลัก (MAIN AREA) ---
-# 🌟 จุดแก้ไขสำคัญ: ตั้งค่า use_container_width=False 
-# เพื่อไม่ให้ Streamlit บีบย่อกราฟจนอ่านไม่ออก ผู้ใช้จะสามารถเลื่อนจอ (Scroll) ดูได้
-st.markdown("<div style='overflow-x: auto;'>", unsafe_allow_html=True)
-st.graphviz_chart(generate_graph(current_node_id, layout_choice), use_container_width=False)
-st.markdown("</div>", unsafe_allow_html=True)
+# 🌟 กลับมาใช้ use_container_width=True แต่กราฟจะสวยงามพอดีกรอบเพราะเราตั้งค่า ratio='compress' ไว้แล้ว
+st.graphviz_chart(generate_graph(current_node_id, layout_choice), use_container_width=True)
