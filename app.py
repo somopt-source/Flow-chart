@@ -1,5 +1,7 @@
 import streamlit as st
 import graphviz
+import pandas as pd
+import io
 
 # ==========================================
 # 1. ตั้งค่าหน้า Streamlit
@@ -9,7 +11,7 @@ st.set_page_config(page_title="Interactive Procurement Flow", layout="wide")
 st.markdown("""
 <div style='text-align: center; margin-bottom: 20px;'>
     <h2 style='color: #1B2631; margin-bottom: 5px; font-weight: bold;'>Interactive Procurement Flowchart</h2>
-    <p style='color: #7F8C8D; font-size: 16px;'>ระบบจำลองขั้นตอนการจัดซื้อจัดจ้าง (คลิกปุ่มด้านขวาเพื่อดูการไหลของกระบวนการ)</p>
+    <p style='color: #7F8C8D; font-size: 16px;'>ระบบจำลองขั้นตอนการจัดซื้อจัดจ้าง พร้อมส่งออกข้อมูลกระบวนการสู่ Excel</p>
 </div>
 """, unsafe_allow_html=True)
 
@@ -51,7 +53,31 @@ if 'current_node' not in st.session_state:
     st.session_state.current_node = 'START'
 
 # ==========================================
-# 3. ฟังก์ชันวาดกราฟ (รับค่าสถานะปัจจุบันเพื่อไฮไลท์)
+# 3. ฟังก์ชันสร้างไฟล์ Excel ในหน่วยความจำ (BytesIO)
+# ==========================================
+def generate_excel():
+    data = []
+    # แปลง Dictionary เป็น List เพื่อใส่ใน DataFrame
+    for node_id, info in FLOW_DATA.items():
+        data.append({
+            'Step ID': node_id,
+            'Step Type': info.get('type', '').upper(),
+            'Title (กระบวนการ)': info.get('title', ''),
+            'Description (รายละเอียด)': info.get('desc', ''),
+            'Next Step / Yes (ขั้นต่อไป / ผ่าน)': info.get('yes', info.get('next', '')),
+            'No / Exception (กรณีไม่ผ่าน)': info.get('no', '-')
+        })
+    
+    df = pd.DataFrame(data)
+    
+    # สร้างไฟล์ Excel ในหน่วยความจำ
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False, sheet_name='Procurement Process')
+    return output.getvalue()
+
+# ==========================================
+# 4. ฟังก์ชันวาดกราฟ (รับค่าสถานะปัจจุบันเพื่อไฮไลท์)
 # ==========================================
 def generate_graph(active_node):
     dot = graphviz.Digraph('ProcurementFlow', comment='Interactive Flow')
@@ -59,16 +85,13 @@ def generate_graph(active_node):
     dot.attr('node', fontname='Tahoma, sans-serif')
     dot.attr('edge', color='#BDC3C7', penwidth='2')
 
-    # ฟังก์ชันช่วยสร้างกล่องแบบมีสีไฮไลท์
     def get_node_style(node_id, base_color, fill_color, shape, style):
         is_active = (node_id == active_node)
-        # ถ้า Active ให้เปลี่ยนกรอบเป็นสีเหลืองทองหนาๆ และพื้นหลังสว่าง
         pw = '4' if is_active else '2'
         c = '#F1C40F' if is_active else base_color
         f = '#FCF3CF' if is_active else fill_color
         return {'shape': shape, 'style': style, 'color': c, 'fillcolor': f, 'penwidth': pw}
 
-    # สร้าง Nodes ทั้งหมด
     dot.node('START', 'START', **get_node_style('START', '#2ECC71', '#EAFAF1', 'box', 'filled,rounded'))
     dot.node('END', 'END', **get_node_style('END', '#E74C3C', '#FDEDEC', 'box', 'filled,rounded'))
 
@@ -97,7 +120,6 @@ def generate_graph(active_node):
     for e_id, e_lbl in excs:
         dot.node(e_id, e_lbl, **get_node_style(e_id, '#E74C3C', '#FDEDEC', 'rect', 'filled,dashed'))
 
-    # วาดเส้น Main Flow
     with dot.subgraph() as s1:
         s1.attr(rank='same')
         s1.edges([('START', 'STAGE_01'), ('STAGE_01', 'DEC_01'), ('DEC_01', 'STAGE_02'), ('STAGE_02', 'DEC_02'), ('DEC_02', 'STAGE_03')])
@@ -116,7 +138,6 @@ def generate_graph(active_node):
     dot.edge('STAGE_03', 'STAGE_04', weight='100')
     dot.edge('STAGE_07', 'STAGE_08', weight='100')
 
-    # วาดเส้น Exception (No)
     dot.edge('DEC_01', 'EXC_01', label='No', color='#E74C3C', fontcolor='#E74C3C')
     dot.edge('EXC_01', 'STAGE_01', style='dashed', constraint='false', color='#E74C3C')
     
@@ -129,7 +150,6 @@ def generate_graph(active_node):
     dot.edge('DEC_04', 'EXC_04', label='No', color='#E74C3C', fontcolor='#E74C3C')
     dot.edge('EXC_04', 'STAGE_08', style='dashed', constraint='false', color='#E74C3C')
 
-    # ใส่ Label Yes
     dot.edge('DEC_01', 'STAGE_02', label='Yes', fontcolor='#2ECC71')
     dot.edge('DEC_02', 'STAGE_03', label='Yes', fontcolor='#2ECC71')
     dot.edge('STAGE_05', 'DEC_03', dir='back', label='Yes', fontcolor='#2ECC71')
@@ -138,16 +158,14 @@ def generate_graph(active_node):
     return dot
 
 # ==========================================
-# 4. ออกแบบ UI (แบ่งซ้าย-ขวา)
+# 5. ออกแบบ UI (แบ่งซ้าย-ขวา)
 # ==========================================
 col1, col2 = st.columns([7, 3])
 
-# ดึงข้อมูลโหนดปัจจุบัน
 current_node_id = st.session_state.current_node
 node_info = FLOW_DATA.get(current_node_id, {})
 
 with col1:
-    # แสดงกราฟ
     st.graphviz_chart(generate_graph(current_node_id), use_container_width=True)
 
 with col2:
@@ -158,7 +176,9 @@ with col2:
     
     st.markdown("---")
     
-    # สร้างปุ่มกดตามประเภทของกล่อง
+    # ------------------------------------
+    # ส่วนของปุ่มควบคุมกระบวนการ
+    # ------------------------------------
     node_type = node_info.get('type')
     
     if node_type == 'decision':
@@ -185,3 +205,23 @@ with col2:
             st.rerun()
 
     st.caption("หมายเหตุ: กล่องที่ถูกไฮไลท์ (สีเหลือง) คือขั้นตอนที่ระบบกำลังทำงานอยู่")
+    
+    st.markdown("---")
+    
+    # ------------------------------------
+    # ส่วนของการดาวน์โหลด Excel
+    # ------------------------------------
+    st.markdown("### 📥 ส่งออกข้อมูลกระบวนการ")
+    st.write("ดาวน์โหลดตารางกระบวนการทั้งหมดเพื่อนำไปประยุกต์ใช้ หรือแก้ไขต่อใน Excel")
+    
+    # ดึงค่า Bytes ของไฟล์ Excel
+    excel_data = generate_excel()
+    
+    # สร้างปุ่มดาวน์โหลด
+    st.download_button(
+        label="📊 ดาวน์โหลด Process Table (.xlsx)",
+        data=excel_data,
+        file_name="Procurement_Process_Flow.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        use_container_width=True
+    )
