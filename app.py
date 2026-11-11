@@ -9,7 +9,7 @@ import io
 st.set_page_config(
     page_title="Interactive Procurement Flow", 
     layout="wide",
-    initial_sidebar_state="expanded" # ตั้งค่าให้ Sidebar เปิดเป็นค่าเริ่มต้น
+    initial_sidebar_state="expanded"
 )
 
 st.markdown("""
@@ -207,11 +207,20 @@ def generate_excel():
 
 
 # ==========================================
-# 5. ออกแบบ UI (พื้นที่หลัก และ Sidebar)
+# 5. ออกแบบ UI 
 # ==========================================
 
 current_node_id = st.session_state.current_node
 node_info = FLOW_DATA.get(current_node_id, {})
+
+# --- จุดแก้ไขสำคัญ: ย้าย Layout Choice ขึ้นมาก่อน Sidebar ---
+layout_choice = st.radio(
+    "🔄 เลือกรูปแบบการแสดงผลกราฟ (Layout Mode):",
+    options=["แนวนอน (S-Curve)", "แนวตั้ง (Top-to-Bottom)"],
+    horizontal=True
+)
+
+st.markdown("<hr style='margin-top: 5px; margin-bottom: 20px;'>", unsafe_allow_html=True)
 
 # --- ส่วนของ SIDEBAR (แผงควบคุมด้านซ้าย) ---
 with st.sidebar:
@@ -250,8 +259,8 @@ with st.sidebar:
     st.markdown("---")
     st.markdown("### 📥 ดาวน์โหลด")
     
-    # ดึงกราฟแบบต้นฉบับสำหรับดาวน์โหลด (ดักจับ Error กรณี Backend ประมวลผลภาพไม่ได้)
-    clean_graph = generate_graph(None, layout_choice if 'layout_choice' in locals() else "แนวนอน (S-Curve)")
+    # --- ดึงกราฟสำหรับดาวน์โหลด โดยใช้ layout_choice ล่าสุดที่เลือก ---
+    clean_graph = generate_graph(None, layout_choice)
     
     try:
         png_data = clean_graph.pipe(format='png')
@@ -277,7 +286,6 @@ with st.sidebar:
     except Exception as e:
         st.warning("⚠️ เซิร์ฟเวอร์ไม่พร้อมสำหรับสร้างไฟล์ SVG")
     
-    # โหลดไฟล์ตาราง (ทำงานได้ 100% ไม่มีปัญหาเรื่อง Font)
     excel_data = generate_excel()
     st.download_button(
         label="📊 ดาวน์โหลด Process Table (.xlsx)",
@@ -288,14 +296,5 @@ with st.sidebar:
     )
 
 # --- ส่วนของพื้นที่หลัก (MAIN AREA) ---
-# ตัวเลือก Layout ด้านบนกราฟ
-layout_choice = st.radio(
-    "🔄 เลือกรูปแบบการแสดงผลกราฟ (Layout Mode):",
-    options=["แนวนอน (S-Curve)", "แนวตั้ง (Top-to-Bottom)"],
-    horizontal=True
-)
-
-st.markdown("<hr style='margin-top: 5px; margin-bottom: 20px;'>", unsafe_allow_html=True)
-
-# วาดกราฟบนพื้นที่หลัก (Frontend)
+# วาดกราฟบนพื้นที่หลัก (แสดงตามรูปแบบที่เลือก)
 st.graphviz_chart(generate_graph(current_node_id, layout_choice), use_container_width=True)
