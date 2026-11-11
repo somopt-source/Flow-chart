@@ -56,26 +56,25 @@ if 'current_node' not in st.session_state:
     st.session_state.current_node = 'START'
 
 # ==========================================
-# 3. ฟังก์ชันวาดกราฟ (จัดกึ่งกลางข้อความ และปรับสเกลพอดีจอ)
+# 3. ฟังก์ชันวาดกราฟ (ย่อขนาดและปรับสัดส่วนให้พอดีจอ)
 # ==========================================
 def generate_graph(active_node, layout_mode):
     dot = graphviz.Digraph('ProcurementFlow', comment='Interactive Flow')
     
-    dot.attr(dpi='150')
-    dot.attr(size='14,14!')
-    dot.attr(ratio='compress')
+    # 🌟 กำหนดค่า DPI และจัดระยะห่างให้พอดี ไม่ใหญ่เกินไป
+    dot.attr(dpi='100')
     
     if layout_mode == "แนวนอน (S-Curve)":
-        dot.attr(rankdir='TB', splines='ortho', nodesep='0.5', ranksep='0.6')
+        dot.attr(rankdir='TB', splines='ortho', nodesep='0.3', ranksep='0.4')
     else:
-        dot.attr(rankdir='TB', splines='polyline', nodesep='0.6', ranksep='0.6')
+        dot.attr(rankdir='TB', splines='polyline', nodesep='0.4', ranksep='0.4')
         
     dot.attr('node', fontname='Segoe UI, Tahoma, Arial Unicode MS, sans-serif')
-    dot.attr('edge', color='#BDC3C7', penwidth='2.5', fontname='Segoe UI, Tahoma', fontsize='11')
+    dot.attr('edge', color='#BDC3C7', penwidth='2', fontname='Segoe UI, Tahoma', fontsize='10')
 
     def get_node_style(node_id, base_color, fill_color, shape, style):
         is_active = (node_id == active_node)
-        pw = '4' if is_active else '2'
+        pw = '3' if is_active else '1.5'
         c = '#F39C12' if is_active else base_color
         f = '#FEF9E7' if is_active else fill_color
         return {'shape': shape, 'style': style, 'color': c, 'fillcolor': f, 'penwidth': pw}
@@ -85,7 +84,7 @@ def generate_graph(active_node, layout_mode):
 
     def create_stage_node(node_id, stage_num, eng_title, th_title):
         is_active = (node_id == active_node)
-        pw = '3.5' if is_active else '2'
+        pw = '2.5' if is_active else '1.5'
         c_box = '#F39C12' if is_active else '#3498DB'
         f_box = '#FEF9E7' if is_active else '#F4FAFF'
         
@@ -96,13 +95,13 @@ def generate_graph(active_node, layout_mode):
         eng_title = eng_title.replace("&", "&amp;")
         th_title = th_title.replace("&", "&amp;")
         
-        # 🌟 ใส่ ALIGN="CENTER" ในทุก TD เพื่อบังคับข้อความให้อยู่ตรงกลางกล่องเสมอ
-        label = f'''<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="4">
-        <TR><TD ALIGN="CENTER"><FONT COLOR="{c_num}" POINT-SIZE="10"><B>{stage_num}</B></FONT></TD></TR>
-        <TR><TD ALIGN="CENTER"><FONT COLOR="{c_eng}" POINT-SIZE="13"><B>{eng_title}</B></FONT></TD></TR>
-        <TR><TD ALIGN="CENTER"><FONT COLOR="{c_th}" POINT-SIZE="10">{th_title}</FONT></TD></TR>
+        # 🌟 ปรับขนาดฟอนต์ให้พอดีตา (ไม่ใหญ่เกินไป) และจัดกึ่งกลาง
+        label = f'''<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="3">
+        <TR><TD ALIGN="CENTER"><FONT COLOR="{c_num}" POINT-SIZE="9"><B>{stage_num}</B></FONT></TD></TR>
+        <TR><TD ALIGN="CENTER"><FONT COLOR="{c_eng}" POINT-SIZE="11"><B>{eng_title}</B></FONT></TD></TR>
+        <TR><TD ALIGN="CENTER"><FONT COLOR="{c_th}" POINT-SIZE="9">{th_title}</FONT></TD></TR>
         </TABLE>>'''
-        dot.node(node_id, label, shape='box', style='filled,rounded', color=c_box, fillcolor=f_box, penwidth=pw, margin='0.2,0.15')
+        dot.node(node_id, label, shape='box', style='filled,rounded', color=c_box, fillcolor=f_box, penwidth=pw, margin='0.15,0.1')
 
     create_stage_node('STAGE_01', 'STAGE 01', 'Draft SOR', 'จัดทำข้อกำหนดความต้องการ (SOR)')
     create_stage_node('STAGE_02', 'STAGE 02', 'Submit PR', 'สร้างใบขอซื้อ (PR) ในระบบ')
@@ -117,10 +116,10 @@ def generate_graph(active_node, layout_mode):
     create_stage_node('STAGE_11', 'STAGE 11', 'KPI & Closeout', 'ประเมินผลงานและปิดโครงการ')
 
     decs = [
-        ('DEC_01', '<<FONT POINT-SIZE="11"><B>SOR &amp;<BR/>Budget<BR/>Approved?</B></FONT>>'), 
-        ('DEC_02', '<<FONT POINT-SIZE="11"><B>PR<BR/>Approved?</B></FONT>>'),
-        ('DEC_03', '<<FONT POINT-SIZE="11"><B>Technical<BR/>Pass<BR/>SOR?</B></FONT>>'), 
-        ('DEC_04', '<<FONT POINT-SIZE="11"><B>Inspection<BR/>on<BR/>FAT/SAT<BR/>Pass?</B></FONT>>')
+        ('DEC_01', '<<FONT POINT-SIZE="10"><B>SOR &amp;<BR/>Budget<BR/>Approved?</B></FONT>>'), 
+        ('DEC_02', '<<FONT POINT-SIZE="10"><B>PR<BR/>Approved?</B></FONT>>'),
+        ('DEC_03', '<<FONT POINT-SIZE="10"><B>Technical<BR/>Pass<BR/>SOR?</B></FONT>>'), 
+        ('DEC_04', '<<FONT POINT-SIZE="10"><B>Inspection<BR/>on<BR/>FAT/SAT<BR/>Pass?</B></FONT>>')
     ]
     for d_id, d_lbl in decs:
         dot.node(d_id, d_lbl, **get_node_style(d_id, '#F39C12', '#FEF9E7', 'diamond', 'filled'))
@@ -133,13 +132,12 @@ def generate_graph(active_node, layout_mode):
     ]
     for e_id, e_title, e_th in excs:
         is_active = (e_id == active_node)
-        pw = '2.5' if is_active else '1.5'
+        pw = '2' if is_active else '1.2'
         c = '#F39C12' if is_active else '#E74C3C'
         f = '#FEF9E7' if is_active else '#FDEDEC'
-        # 🌟 จัดกึ่งกลางสำหรับกล่อง Exception เช่นกัน
-        label = f'''<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="4">
-        <TR><TD ALIGN="CENTER"><FONT COLOR="{c}" POINT-SIZE="11"><B>{e_title}</B></FONT></TD></TR>
-        <TR><TD ALIGN="CENTER"><FONT COLOR="#C0392B" POINT-SIZE="10">{e_th}</FONT></TD></TR>
+        label = f'''<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="3">
+        <TR><TD ALIGN="CENTER"><FONT COLOR="{c}" POINT-SIZE="10"><B>{e_title}</B></FONT></TD></TR>
+        <TR><TD ALIGN="CENTER"><FONT COLOR="#C0392B" POINT-SIZE="9">{e_th}</FONT></TD></TR>
         </TABLE>>'''
         dot.node(e_id, label, shape='rect', style='filled,rounded,dashed', color=c, fillcolor=f, penwidth=pw)
 
@@ -306,5 +304,5 @@ with st.sidebar:
     )
 
 # --- ส่วนของพื้นที่หลัก (MAIN AREA) ---
-# 🌟 ใช้ use_container_width=True ร่วมกับสเกลที่พอดี ทำให้กราฟแสดงผลพอดีจอสวยงามทั้งแนวตั้งและแนวนอน
+# 🌟 ใช้ use_container_width=True เพื่อให้ Streamlit ปรับขนาดภาพลงมาพอดีหน้าจอสวยงาม
 st.graphviz_chart(generate_graph(current_node_id, layout_choice), use_container_width=True)
