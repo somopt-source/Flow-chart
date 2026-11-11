@@ -13,9 +13,10 @@ st.markdown("""
 
 # 2. สร้าง Graph และตั้งค่าพื้นฐาน
 dot = graphviz.Digraph('ProcurementFlowchart', comment='SOR-to-Pay')
-# splines='ortho' ทำให้เส้นหักศอกฉาก / nodesep, ranksep คุมระยะห่าง
 dot.attr(rankdir='TB', splines='ortho', nodesep='0.5', ranksep='0.6')
-dot.attr('node', fontname='Tahoma, Arial, sans-serif')
+
+# ** สำคัญ: ตั้งค่าฟอนต์ให้รองรับภาษาไทยใน Graphviz **
+dot.attr('node', fontname='Tahoma, Arial Unicode MS, sans-serif')
 dot.attr('edge', color='#95A5A6', penwidth='3', arrowsize='0.8')
 
 # ฟังก์ชันช่วยสร้าง HTML Label สำหรับ STAGE ให้ดูสวยงาม
@@ -33,23 +34,23 @@ def create_stage_node(node_id, stage_num, eng_title, th_title):
 # ==========================================
 
 # Start & End
-dot.node('START', '<B>START</B>', shape='box', style='filled,rounded', 
+dot.node('START', '<<B>START</B>>', shape='box', style='filled,rounded', 
          color='#2ECC71', fillcolor='#EAFAF1', fontcolor='#1E8449', penwidth='2.5', width='1', height='0.6')
-dot.node('END', '<B>END</B>', shape='box', style='filled,rounded', 
+dot.node('END', '<<B>END</B>>', shape='box', style='filled,rounded', 
          color='#E74C3C', fillcolor='#FDEDEC', fontcolor='#C0392B', penwidth='2.5', width='1', height='0.6')
 
 # แถวที่ 1
 create_stage_node('STAGE_01', 'STAGE 01', 'Draft SOR', 'จัดทำข้อกำหนดความต้องการ')
-dot.node('DEC_01', '<B>SOR &<BR/>Budget<BR/>Approved?</B>', shape='diamond', style='filled', 
+dot.node('DEC_01', '<<B>SOR &<BR/>Budget<BR/>Approved?</B>>', shape='diamond', style='filled', 
          color='#F39C12', fillcolor='#FEF9E7', penwidth='2.5', fontcolor='#B9770E')
 create_stage_node('STAGE_02', 'STAGE 02', 'Submit PR', 'เปิดใบขอซื้อในระบบ ERP')
-dot.node('DEC_02', '<B>PR<BR/>Approved?</B>', shape='diamond', style='filled', 
+dot.node('DEC_02', '<<B>PR<BR/>Approved?</B>>', shape='diamond', style='filled', 
          color='#F39C12', fillcolor='#FEF9E7', penwidth='2.5', fontcolor='#B9770E')
 create_stage_node('STAGE_03', 'STAGE 03', 'Issue RFQ / RFP', 'ส่งเทียบราคา/ประมูลแนบ SOR')
 
 # แถวที่ 2
 create_stage_node('STAGE_04', 'STAGE 04', 'Bids / Proposals', 'ผู้ขายยื่นข้อเสนอเทคนิค+ราคา')
-dot.node('DEC_03', '<B>Technical<BR/>Pass<BR/>SOR?</B>', shape='diamond', style='filled', 
+dot.node('DEC_03', '<<B>Technical<BR/>Pass<BR/>SOR?</B>>', shape='diamond', style='filled', 
          color='#F39C12', fillcolor='#FEF9E7', penwidth='2.5', fontcolor='#B9770E')
 create_stage_node('STAGE_05', 'STAGE 05', 'Commercial Eval', 'เจรจาต่อรอง & สรุปราคา')
 create_stage_node('STAGE_06', 'STAGE 06', 'Issue PO / Contract', 'ออกใบสั่งซื้อ/สัญญาตาม SOR')
@@ -57,7 +58,7 @@ create_stage_node('STAGE_07', 'STAGE 07', 'Signed Agreement', 'คู่ค้�
 
 # แถวที่ 3
 create_stage_node('STAGE_08', 'STAGE 08', 'Execution & Delivery', 'ส่งมอบงานตามงวดใน SOR')
-dot.node('DEC_04', '<B>Inspection<BR/>on<BR/>FAT/SAT<BR/>Pass?</B>', shape='diamond', style='filled', 
+dot.node('DEC_04', '<<B>Inspection<BR/>on<BR/>FAT/SAT<BR/>Pass?</B>>', shape='diamond', style='filled', 
          color='#F39C12', fillcolor='#FEF9E7', penwidth='2.5', fontcolor='#B9770E')
 create_stage_node('STAGE_09', 'STAGE 09', '3-Way Matching', 'ตรวจ PO + ตรวจรับ + Invoice')
 create_stage_node('STAGE_10', 'STAGE 10', 'Payment', 'จ่ายเงินตามงวด/เครดิตเทอม')
@@ -72,33 +73,4 @@ with dot.subgraph() as s1:
     s1.attr(rank='same')
     s1.edge('START', 'STAGE_01')
     s1.edge('STAGE_01', 'DEC_01')
-    s1.edge('DEC_01', 'STAGE_02')
-    s1.edge('STAGE_02', 'DEC_02')
-    s1.edge('DEC_02', 'STAGE_03')
-
-# กลุ่มที่ 2: วิ่งจาก ขวา กลับมา ซ้าย (ใช้เทคนิค dir='back')
-with dot.subgraph() as s2:
-    s2.attr(rank='same')
-    # กำหนดเรียงลำดับจากซ้ายไปขวา (ตาม Layout) แต่ลูกศรจะวิ่งย้อนทาง
-    s2.edge('STAGE_07', 'STAGE_06', dir='back')
-    s2.edge('STAGE_06', 'STAGE_05', dir='back')
-    s2.edge('STAGE_05', 'DEC_03', dir='back')
-    s2.edge('DEC_03', 'STAGE_04', dir='back')
-
-# กลุ่มที่ 3: วิ่งจาก ซ้าย ไป ขวา
-with dot.subgraph() as s3:
-    s3.attr(rank='same')
-    s3.edge('STAGE_08', 'DEC_04')
-    s3.edge('DEC_04', 'STAGE_09')
-    s3.edge('STAGE_09', 'STAGE_10')
-    s3.edge('STAGE_10', 'STAGE_11')
-    s3.edge('STAGE_11', 'END')
-
-# ทางเชื่อมระหว่างชั้น (ดึงขอบให้ชิดกันด้วย weight)
-dot.edge('STAGE_03', 'STAGE_04', weight='100')
-dot.edge('STAGE_07', 'STAGE_08', weight='100')
-
-# ==========================================
-# 5. แสดงผลบน Streamlit
-# ==========================================
-st.graphviz_chart(dot, use_container_width=True)
+    s1.edge('DEC_0
