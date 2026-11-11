@@ -4,9 +4,13 @@ import pandas as pd
 import io
 
 # ==========================================
-# 1. ตั้งค่าหน้า Streamlit
+# 1. ตั้งค่าหน้า Streamlit (ย้ายแผงควบคุมไป Sidebar)
 # ==========================================
-st.set_page_config(page_title="Interactive Procurement Flow", layout="wide")
+st.set_page_config(
+    page_title="Interactive Procurement Flow", 
+    layout="wide",
+    initial_sidebar_state="expanded" # ตั้งค่าให้ Sidebar เปิดเป็นค่าเริ่มต้น
+)
 
 st.markdown("""
 <div style='text-align: center; margin-bottom: 20px;'>
@@ -52,17 +56,15 @@ if 'current_node' not in st.session_state:
     st.session_state.current_node = 'START'
 
 # ==========================================
-# 3. ฟังก์ชันวาดกราฟ (อัปเดตให้รองรับ แนวนอน และ แนวตั้ง)
+# 3. ฟังก์ชันวาดกราฟ (รองรับ แนวนอน และ แนวตั้ง)
 # ==========================================
 def generate_graph(active_node, layout_mode):
     dot = graphviz.Digraph('ProcurementFlow', comment='Interactive Flow')
     
-    # ตั้งค่ากราฟเบื้องต้น
     dot.attr(rankdir='TB', splines='ortho', nodesep='0.4', ranksep='0.6')
     dot.attr('node', fontname='Tahoma, Arial Unicode MS, sans-serif')
     dot.attr('edge', color='#BDC3C7', penwidth='2', fontname='Tahoma', fontsize='10')
 
-    # ฟังก์ชันช่วยสร้างสไตล์
     def get_node_style(node_id, base_color, fill_color, shape, style):
         is_active = (node_id == active_node)
         pw = '4' if is_active else '2'
@@ -70,11 +72,9 @@ def generate_graph(active_node, layout_mode):
         f = '#FCF3CF' if is_active else fill_color
         return {'shape': shape, 'style': style, 'color': c, 'fillcolor': f, 'penwidth': pw}
 
-    # วาดโหนด Start / End
     dot.node('START', '<<B>START</B>>', **get_node_style('START', '#2ECC71', '#EAFAF1', 'box', 'filled,rounded'))
     dot.node('END', '<<B>END</B>>', **get_node_style('END', '#E74C3C', '#FDEDEC', 'box', 'filled,rounded'))
 
-    # วาดโหนด STAGE
     def create_stage_node(node_id, stage_num, eng_title, th_title):
         is_active = (node_id == active_node)
         pw = '4' if is_active else '2.5'
@@ -103,7 +103,6 @@ def generate_graph(active_node, layout_mode):
     create_stage_node('STAGE_10', 'STAGE 10', 'Payment', 'จ่ายเงินตามงวด/เครดิตเทอม')
     create_stage_node('STAGE_11', 'STAGE 11', 'KPI & Closeout', 'ประเมินผลงาน & ปิดโครงการ')
 
-    # วาดโหนด DECISION
     decs = [
         ('DEC_01', '<<B>SOR &amp;<BR/>Budget<BR/>Approved?</B>>'), 
         ('DEC_02', '<<B>PR<BR/>Approved?</B>>'),
@@ -113,7 +112,6 @@ def generate_graph(active_node, layout_mode):
     for d_id, d_lbl in decs:
         dot.node(d_id, d_lbl, **get_node_style(d_id, '#F39C12', '#FEF9E7', 'diamond', 'filled'))
 
-    # วาดโหนด EXCEPTION
     excs = [
         ('EXC_01', 'Revise SOR', 'ทบทวนสเปก/ขอเพิ่มงบ'), 
         ('EXC_02', 'Return to Requester', 'ตีกลับเพื่อแก้ไข PR'),
@@ -131,10 +129,7 @@ def generate_graph(active_node, layout_mode):
         </TABLE>>'''
         dot.node(e_id, label, shape='rect', style='filled,rounded,dashed', color=c, fillcolor=f, penwidth=pw)
 
-    # ==========================================
-    # ตรรกะการลากเส้นตาม Layout ที่เลือก
-    # ==========================================
-    
+    # ตรรกะการลากเส้น
     if layout_mode == "แนวนอน (S-Curve)":
         with dot.subgraph() as s1:
             s1.attr(rank='same')
@@ -156,12 +151,11 @@ def generate_graph(active_node, layout_mode):
             s3.edge('DEC_04', 'STAGE_09', label=' Yes', fontcolor='#2ECC71')
             s3.edges([('STAGE_09', 'STAGE_10'), ('STAGE_10', 'STAGE_11'), ('STAGE_11', 'END')])
 
-        # เส้นเชื่อมระหว่างแถว
         dot.edge('STAGE_03', 'STAGE_04', weight='100')
         dot.edge('STAGE_07', 'STAGE_08', weight='100')
 
     else:
-        # มุมมอง "แนวตั้ง (Top-to-Bottom)"
+        # แนวตั้ง
         dot.edge('START', 'STAGE_01')
         dot.edge('STAGE_01', 'DEC_01')
         dot.edge('DEC_01', 'STAGE_02', label=' Yes', fontcolor='#2ECC71')
@@ -179,16 +173,13 @@ def generate_graph(active_node, layout_mode):
         dot.edge('STAGE_10', 'STAGE_11')
         dot.edge('STAGE_11', 'END')
 
-    # เส้นทาง Exception (ใช้รูปแบบเดียวกันทั้ง 2 Layout)
+    # เส้นทาง Exception (No)
     dot.edge('DEC_01', 'EXC_01', label=' No', color='#E74C3C', fontcolor='#E74C3C', style='bold')
     dot.edge('EXC_01', 'STAGE_01', style='dashed', constraint='false', color='#E74C3C')
-    
     dot.edge('DEC_02', 'EXC_02', label=' No', color='#E74C3C', fontcolor='#E74C3C', style='bold')
     dot.edge('EXC_02', 'STAGE_02', style='dashed', constraint='false', color='#E74C3C')
-    
     dot.edge('DEC_03', 'EXC_03', label=' No', color='#E74C3C', fontcolor='#E74C3C', style='bold')
     dot.edge('EXC_03', 'STAGE_04', style='dashed', constraint='false', color='#E74C3C')
-    
     dot.edge('DEC_04', 'EXC_04', label=' No', color='#E74C3C', fontcolor='#E74C3C', style='bold')
     dot.edge('EXC_04', 'STAGE_08', style='dashed', constraint='false', color='#E74C3C')
 
@@ -216,28 +207,14 @@ def generate_excel():
 
 
 # ==========================================
-# 5. ออกแบบ UI และการโต้ตอบ
+# 5. ออกแบบ UI (พื้นที่หลัก และ Sidebar)
 # ==========================================
-
-# -- เพิ่มตัวเลือก Layout ตรงนี้ --
-layout_choice = st.radio(
-    "🔄 เลือกรูปแบบการแสดงผลกราฟ (Layout Mode):",
-    options=["แนวนอน (S-Curve)", "แนวตั้ง (Top-to-Bottom)"],
-    horizontal=True
-)
-
-st.markdown("<hr style='margin-top: 5px; margin-bottom: 20px;'>", unsafe_allow_html=True)
-
-col1, col2 = st.columns([7, 3])
 
 current_node_id = st.session_state.current_node
 node_info = FLOW_DATA.get(current_node_id, {})
 
-with col1:
-    # วาดกราฟโดยส่ง Layout ที่เลือกลงไป
-    st.graphviz_chart(generate_graph(current_node_id, layout_choice), use_container_width=True)
-
-with col2:
+# --- ส่วนของ SIDEBAR (แผงควบคุมด้านซ้าย) ---
+with st.sidebar:
     st.markdown("### 📍 แผงควบคุม (Control Panel)")
     st.info(f"**สถานะปัจจุบัน:**\n### {node_info.get('title', '')}")
     if 'desc' in node_info:
@@ -247,24 +224,21 @@ with col2:
     
     # ส่วนควบคุม Interactive
     node_type = node_info.get('type')
-    
     if node_type == 'decision':
         st.write("**โปรดตัดสินใจ:**")
         col_yes, col_no = st.columns(2)
         with col_yes:
-            if st.button("✅ ผ่าน / อนุมัติ", use_container_width=True):
+            if st.button("✅ ผ่าน/อนุมัติ", use_container_width=True):
                 st.session_state.current_node = node_info['yes']
                 st.rerun()
         with col_no:
-            if st.button("❌ ไม่อนุมัติ / ไม่ผ่าน", use_container_width=True):
+            if st.button("❌ ไม่อนุมัติ", use_container_width=True):
                 st.session_state.current_node = node_info['no']
                 st.rerun()
-                
     elif node_type in ['start', 'stage', 'exception']:
         if st.button("➡️ ดำเนินการต่อ (Next)", type="primary", use_container_width=True):
             st.session_state.current_node = node_info['next']
             st.rerun()
-            
     elif node_type == 'end':
         st.success("🎉 กระบวนการเสร็จสมบูรณ์!")
         if st.button("🔄 เริ่มต้นกระบวนการใหม่", use_container_width=True):
@@ -276,27 +250,34 @@ with col2:
     st.markdown("---")
     st.markdown("### 📥 ดาวน์โหลด")
     
-    # สร้างกราฟสำหรับดาวน์โหลด (ไม่มีแถบสีเหลือง และใช้ layout ปัจจุบันที่เลือก)
-    clean_graph = generate_graph(None, layout_choice) 
+    # ดึงกราฟแบบต้นฉบับสำหรับดาวน์โหลด (ดักจับ Error กรณี Backend ประมวลผลภาพไม่ได้)
+    clean_graph = generate_graph(None, layout_choice if 'layout_choice' in locals() else "แนวนอน (S-Curve)")
     
-    png_data = clean_graph.pipe(format='png')
-    st.download_button(
-        label="🖼️ ดาวน์โหลดภาพ Flowchart (.png)",
-        data=png_data,
-        file_name="Procurement_Flowchart.png",
-        mime="image/png",
-        use_container_width=True
-    )
+    try:
+        png_data = clean_graph.pipe(format='png')
+        st.download_button(
+            label="🖼️ ดาวน์โหลดภาพ Flowchart (.png)",
+            data=png_data,
+            file_name="Procurement_Flowchart.png",
+            mime="image/png",
+            use_container_width=True
+        )
+    except Exception as e:
+        st.warning("⚠️ เซิร์ฟเวอร์ไม่พร้อมสำหรับสร้างไฟล์ PNG")
+
+    try:
+        svg_data = clean_graph.pipe(format='svg')
+        st.download_button(
+            label="📐 ดาวน์โหลดไฟล์ Vector (.svg) ไปแก้ใน Excel",
+            data=svg_data,
+            file_name="Procurement_Flowchart.svg",
+            mime="image/svg+xml",
+            use_container_width=True
+        )
+    except Exception as e:
+        st.warning("⚠️ เซิร์ฟเวอร์ไม่พร้อมสำหรับสร้างไฟล์ SVG")
     
-    svg_data = clean_graph.pipe(format='svg')
-    st.download_button(
-        label="📐 ดาวน์โหลดภาพเวกเตอร์ (.svg) สำหรับแก้ใน Excel",
-        data=svg_data,
-        file_name="Procurement_Flowchart.svg",
-        mime="image/svg+xml",
-        use_container_width=True
-    )
-    
+    # โหลดไฟล์ตาราง (ทำงานได้ 100% ไม่มีปัญหาเรื่อง Font)
     excel_data = generate_excel()
     st.download_button(
         label="📊 ดาวน์โหลด Process Table (.xlsx)",
@@ -305,3 +286,16 @@ with col2:
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         use_container_width=True
     )
+
+# --- ส่วนของพื้นที่หลัก (MAIN AREA) ---
+# ตัวเลือก Layout ด้านบนกราฟ
+layout_choice = st.radio(
+    "🔄 เลือกรูปแบบการแสดงผลกราฟ (Layout Mode):",
+    options=["แนวนอน (S-Curve)", "แนวตั้ง (Top-to-Bottom)"],
+    horizontal=True
+)
+
+st.markdown("<hr style='margin-top: 5px; margin-bottom: 20px;'>", unsafe_allow_html=True)
+
+# วาดกราฟบนพื้นที่หลัก (Frontend)
+st.graphviz_chart(generate_graph(current_node_id, layout_choice), use_container_width=True)
