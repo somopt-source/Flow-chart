@@ -11,7 +11,7 @@ st.set_page_config(page_title="Interactive Procurement Flow", layout="wide")
 st.markdown("""
 <div style='text-align: center; margin-bottom: 20px;'>
     <h2 style='color: #1B2631; margin-bottom: 5px; font-weight: bold;'>Interactive Procurement Flowchart (SOR-to-Pay)</h2>
-    <p style='color: #7F8C8D; font-size: 16px;'>ระบบจำลองขั้นตอนการจัดซื้อจัดจ้าง พร้อมดาวน์โหลดไฟล์ SVG เพื่อนำไปแก้ไขใน Excel</p>
+    <p style='color: #7F8C8D; font-size: 16px;'>ระบบจำลองขั้นตอนการจัดซื้อจัดจ้าง สามารถปรับเปลี่ยนมุมมองได้</p>
 </div>
 """, unsafe_allow_html=True)
 
@@ -52,15 +52,17 @@ if 'current_node' not in st.session_state:
     st.session_state.current_node = 'START'
 
 # ==========================================
-# 3. ฟังก์ชันวาดกราฟ (รับค่า Active Node เพื่อไฮไลท์ หรือ None เพื่อวาดภาพต้นฉบับ)
+# 3. ฟังก์ชันวาดกราฟ (อัปเดตให้รองรับ แนวนอน และ แนวตั้ง)
 # ==========================================
-def generate_graph(active_node=None):
+def generate_graph(active_node, layout_mode):
     dot = graphviz.Digraph('ProcurementFlow', comment='Interactive Flow')
+    
+    # ตั้งค่ากราฟเบื้องต้น
     dot.attr(rankdir='TB', splines='ortho', nodesep='0.4', ranksep='0.6')
-    # กำหนดฟอนต์ให้รองรับภาษาไทย
     dot.attr('node', fontname='Tahoma, Arial Unicode MS, sans-serif')
-    dot.attr('edge', color='#BDC3C7', penwidth='2')
+    dot.attr('edge', color='#BDC3C7', penwidth='2', fontname='Tahoma', fontsize='10')
 
+    # ฟังก์ชันช่วยสร้างสไตล์
     def get_node_style(node_id, base_color, fill_color, shape, style):
         is_active = (node_id == active_node)
         pw = '4' if is_active else '2'
@@ -68,9 +70,11 @@ def generate_graph(active_node=None):
         f = '#FCF3CF' if is_active else fill_color
         return {'shape': shape, 'style': style, 'color': c, 'fillcolor': f, 'penwidth': pw}
 
+    # วาดโหนด Start / End
     dot.node('START', '<<B>START</B>>', **get_node_style('START', '#2ECC71', '#EAFAF1', 'box', 'filled,rounded'))
     dot.node('END', '<<B>END</B>>', **get_node_style('END', '#E74C3C', '#FDEDEC', 'box', 'filled,rounded'))
 
+    # วาดโหนด STAGE
     def create_stage_node(node_id, stage_num, eng_title, th_title):
         is_active = (node_id == active_node)
         pw = '4' if is_active else '2.5'
@@ -99,6 +103,7 @@ def generate_graph(active_node=None):
     create_stage_node('STAGE_10', 'STAGE 10', 'Payment', 'จ่ายเงินตามงวด/เครดิตเทอม')
     create_stage_node('STAGE_11', 'STAGE 11', 'KPI & Closeout', 'ประเมินผลงาน & ปิดโครงการ')
 
+    # วาดโหนด DECISION
     decs = [
         ('DEC_01', '<<B>SOR &amp;<BR/>Budget<BR/>Approved?</B>>'), 
         ('DEC_02', '<<B>PR<BR/>Approved?</B>>'),
@@ -108,6 +113,7 @@ def generate_graph(active_node=None):
     for d_id, d_lbl in decs:
         dot.node(d_id, d_lbl, **get_node_style(d_id, '#F39C12', '#FEF9E7', 'diamond', 'filled'))
 
+    # วาดโหนด EXCEPTION
     excs = [
         ('EXC_01', 'Revise SOR', 'ทบทวนสเปก/ขอเพิ่มงบ'), 
         ('EXC_02', 'Return to Requester', 'ตีกลับเพื่อแก้ไข PR'),
@@ -125,26 +131,55 @@ def generate_graph(active_node=None):
         </TABLE>>'''
         dot.node(e_id, label, shape='rect', style='filled,rounded,dashed', color=c, fillcolor=f, penwidth=pw)
 
-    # จัดกลุ่มเส้นทางการไหล
-    with dot.subgraph() as s1:
-        s1.attr(rank='same')
-        s1.edges([('START', 'STAGE_01'), ('STAGE_01', 'DEC_01'), ('DEC_01', 'STAGE_02'), ('STAGE_02', 'DEC_02'), ('DEC_02', 'STAGE_03')])
+    # ==========================================
+    # ตรรกะการลากเส้นตาม Layout ที่เลือก
+    # ==========================================
     
-    with dot.subgraph() as s2:
-        s2.attr(rank='same')
-        s2.edge('STAGE_07', 'STAGE_06', dir='back')
-        s2.edge('STAGE_06', 'STAGE_05', dir='back')
-        s2.edge('STAGE_05', 'DEC_03', dir='back')
-        s2.edge('DEC_03', 'STAGE_04', dir='back')
+    if layout_mode == "แนวนอน (S-Curve)":
+        with dot.subgraph() as s1:
+            s1.attr(rank='same')
+            s1.edges([('START', 'STAGE_01'), ('STAGE_01', 'DEC_01')])
+            s1.edge('DEC_01', 'STAGE_02', label=' Yes', fontcolor='#2ECC71')
+            s1.edges([('STAGE_02', 'DEC_02')])
+            s1.edge('DEC_02', 'STAGE_03', label=' Yes', fontcolor='#2ECC71')
+        
+        with dot.subgraph() as s2:
+            s2.attr(rank='same')
+            s2.edge('STAGE_07', 'STAGE_06', dir='back')
+            s2.edge('STAGE_06', 'STAGE_05', dir='back')
+            s2.edge('STAGE_05', 'DEC_03', dir='back', label=' Yes', fontcolor='#2ECC71')
+            s2.edge('DEC_03', 'STAGE_04', dir='back')
 
-    with dot.subgraph() as s3:
-        s3.attr(rank='same')
-        s3.edges([('STAGE_08', 'DEC_04'), ('DEC_04', 'STAGE_09'), ('STAGE_09', 'STAGE_10'), ('STAGE_10', 'STAGE_11'), ('STAGE_11', 'END')])
+        with dot.subgraph() as s3:
+            s3.attr(rank='same')
+            s3.edge('STAGE_08', 'DEC_04')
+            s3.edge('DEC_04', 'STAGE_09', label=' Yes', fontcolor='#2ECC71')
+            s3.edges([('STAGE_09', 'STAGE_10'), ('STAGE_10', 'STAGE_11'), ('STAGE_11', 'END')])
 
-    dot.edge('STAGE_03', 'STAGE_04', weight='100')
-    dot.edge('STAGE_07', 'STAGE_08', weight='100')
+        # เส้นเชื่อมระหว่างแถว
+        dot.edge('STAGE_03', 'STAGE_04', weight='100')
+        dot.edge('STAGE_07', 'STAGE_08', weight='100')
 
-    # เส้นทาง Exception (No)
+    else:
+        # มุมมอง "แนวตั้ง (Top-to-Bottom)"
+        dot.edge('START', 'STAGE_01')
+        dot.edge('STAGE_01', 'DEC_01')
+        dot.edge('DEC_01', 'STAGE_02', label=' Yes', fontcolor='#2ECC71')
+        dot.edge('STAGE_02', 'DEC_02')
+        dot.edge('DEC_02', 'STAGE_03', label=' Yes', fontcolor='#2ECC71')
+        dot.edge('STAGE_03', 'STAGE_04')
+        dot.edge('STAGE_04', 'DEC_03')
+        dot.edge('DEC_03', 'STAGE_05', label=' Yes', fontcolor='#2ECC71')
+        dot.edge('STAGE_05', 'STAGE_06')
+        dot.edge('STAGE_06', 'STAGE_07')
+        dot.edge('STAGE_07', 'STAGE_08')
+        dot.edge('STAGE_08', 'DEC_04')
+        dot.edge('DEC_04', 'STAGE_09', label=' Yes', fontcolor='#2ECC71')
+        dot.edge('STAGE_09', 'STAGE_10')
+        dot.edge('STAGE_10', 'STAGE_11')
+        dot.edge('STAGE_11', 'END')
+
+    # เส้นทาง Exception (ใช้รูปแบบเดียวกันทั้ง 2 Layout)
     dot.edge('DEC_01', 'EXC_01', label=' No', color='#E74C3C', fontcolor='#E74C3C', style='bold')
     dot.edge('EXC_01', 'STAGE_01', style='dashed', constraint='false', color='#E74C3C')
     
@@ -156,12 +191,6 @@ def generate_graph(active_node=None):
     
     dot.edge('DEC_04', 'EXC_04', label=' No', color='#E74C3C', fontcolor='#E74C3C', style='bold')
     dot.edge('EXC_04', 'STAGE_08', style='dashed', constraint='false', color='#E74C3C')
-
-    # เส้นทางผ่าน (Yes)
-    dot.edge('DEC_01', 'STAGE_02', label=' Yes', fontcolor='#2ECC71')
-    dot.edge('DEC_02', 'STAGE_03', label=' Yes', fontcolor='#2ECC71')
-    dot.edge('STAGE_05', 'DEC_03', dir='back', label=' Yes', fontcolor='#2ECC71')
-    dot.edge('DEC_04', 'STAGE_09', label=' Yes', fontcolor='#2ECC71')
 
     return dot
 
@@ -185,17 +214,28 @@ def generate_excel():
         df.to_excel(writer, index=False, sheet_name='Procurement Process')
     return output.getvalue()
 
+
 # ==========================================
-# 5. ออกแบบ UI (แบ่งซ้าย-ขวา)
+# 5. ออกแบบ UI และการโต้ตอบ
 # ==========================================
+
+# -- เพิ่มตัวเลือก Layout ตรงนี้ --
+layout_choice = st.radio(
+    "🔄 เลือกรูปแบบการแสดงผลกราฟ (Layout Mode):",
+    options=["แนวนอน (S-Curve)", "แนวตั้ง (Top-to-Bottom)"],
+    horizontal=True
+)
+
+st.markdown("<hr style='margin-top: 5px; margin-bottom: 20px;'>", unsafe_allow_html=True)
+
 col1, col2 = st.columns([7, 3])
 
 current_node_id = st.session_state.current_node
 node_info = FLOW_DATA.get(current_node_id, {})
 
 with col1:
-    # แสดงกราฟแบบมีไฮไลท์สถานะปัจจุบัน
-    st.graphviz_chart(generate_graph(current_node_id), use_container_width=True)
+    # วาดกราฟโดยส่ง Layout ที่เลือกลงไป
+    st.graphviz_chart(generate_graph(current_node_id, layout_choice), use_container_width=True)
 
 with col2:
     st.markdown("### 📍 แผงควบคุม (Control Panel)")
@@ -205,9 +245,7 @@ with col2:
     
     st.markdown("---")
     
-    # ------------------------------------
-    # ส่วนของปุ่มควบคุมกระบวนการ (Interactive)
-    # ------------------------------------
+    # ส่วนควบคุม Interactive
     node_type = node_info.get('type')
     
     if node_type == 'decision':
@@ -238,10 +276,9 @@ with col2:
     st.markdown("---")
     st.markdown("### 📥 ดาวน์โหลด")
     
-    # ดึงกราฟแบบต้นฉบับ (ลบแถบสีเหลืองออก) สำหรับนำไปใช้งาน
-    clean_graph = generate_graph(None) 
+    # สร้างกราฟสำหรับดาวน์โหลด (ไม่มีแถบสีเหลือง และใช้ layout ปัจจุบันที่เลือก)
+    clean_graph = generate_graph(None, layout_choice) 
     
-    # [ปุ่มที่ 1] ดาวน์โหลดภาพนิ่ง (PNG)
     png_data = clean_graph.pipe(format='png')
     st.download_button(
         label="🖼️ ดาวน์โหลดภาพ Flowchart (.png)",
@@ -251,7 +288,6 @@ with col2:
         use_container_width=True
     )
     
-    # [ปุ่มที่ 2] ดาวน์โหลดภาพเวกเตอร์ (SVG) - นำไปแปลงเป็น Shape ใน Excel
     svg_data = clean_graph.pipe(format='svg')
     st.download_button(
         label="📐 ดาวน์โหลดภาพเวกเตอร์ (.svg) สำหรับแก้ใน Excel",
@@ -261,7 +297,6 @@ with col2:
         use_container_width=True
     )
     
-    # [ปุ่มที่ 3] ดาวน์โหลดข้อมูลตาราง (Excel)
     excel_data = generate_excel()
     st.download_button(
         label="📊 ดาวน์โหลด Process Table (.xlsx)",
