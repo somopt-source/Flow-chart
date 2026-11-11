@@ -56,22 +56,26 @@ if 'current_node' not in st.session_state:
     st.session_state.current_node = 'START'
 
 # ==========================================
-# 3. ฟังก์ชันวาดกราฟ (ปรับดีไซน์ข้อความใหม่ให้สบายตา)
+# 3. ฟังก์ชันวาดกราฟ (ปรับขนาดและช่องไฟให้อ่านง่าย)
 # ==========================================
 def generate_graph(active_node, layout_mode):
+    # ปรับขนาดภาพรวม (dpi) ให้ภาพคมชัดขึ้นเมื่อขยาย
     dot = graphviz.Digraph('ProcurementFlow', comment='Interactive Flow')
+    dot.attr(dpi='150')
     
     if layout_mode == "แนวนอน (S-Curve)":
-        dot.attr(rankdir='TB', splines='ortho', nodesep='0.4', ranksep='0.6')
+        # เพิ่มระยะห่างแนวนอน (nodesep) ให้กล่องไม่เบียดกัน
+        dot.attr(rankdir='TB', splines='ortho', nodesep='0.6', ranksep='0.8')
     else:
-        dot.attr(rankdir='TB', splines='polyline', nodesep='0.5', ranksep='0.5')
+        # เพิ่มระยะห่างแนวตั้ง (ranksep) ให้มีพื้นที่ลากเส้นสวยงาม
+        dot.attr(rankdir='TB', splines='polyline', nodesep='0.8', ranksep='0.7')
         
     dot.attr('node', fontname='Segoe UI, Tahoma, Arial Unicode MS, sans-serif')
-    dot.attr('edge', color='#BDC3C7', penwidth='2', fontname='Segoe UI, Tahoma', fontsize='9')
+    dot.attr('edge', color='#BDC3C7', penwidth='2.5', fontname='Segoe UI, Tahoma', fontsize='12')
 
     def get_node_style(node_id, base_color, fill_color, shape, style):
         is_active = (node_id == active_node)
-        pw = '4' if is_active else '2'
+        pw = '5' if is_active else '2'
         c = '#F39C12' if is_active else base_color
         f = '#FEF9E7' if is_active else fill_color
         return {'shape': shape, 'style': style, 'color': c, 'fillcolor': f, 'penwidth': pw}
@@ -81,11 +85,10 @@ def generate_graph(active_node, layout_mode):
 
     def create_stage_node(node_id, stage_num, eng_title, th_title):
         is_active = (node_id == active_node)
-        pw = '3.5' if is_active else '2'
+        pw = '4' if is_active else '2'
         c_box = '#F39C12' if is_active else '#3498DB'
         f_box = '#FEF9E7' if is_active else '#F4FAFF'
         
-        # สีฟอนต์ให้ดูเป็นมืออาชีพ
         c_num = '#E67E22' if is_active else '#2980B9'
         c_eng = '#2C3E50'
         c_th = '#7F8C8D'
@@ -93,15 +96,14 @@ def generate_graph(active_node, layout_mode):
         eng_title = eng_title.replace("&", "&amp;")
         th_title = th_title.replace("&", "&amp;")
         
-        # ปรับ Padding และขนาด Font ให้สวยงาม (Hierarchy)
-        label = f'''<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="4">
-        <TR><TD><FONT COLOR="{c_num}" POINT-SIZE="9"><B>{stage_num}</B></FONT></TD></TR>
-        <TR><TD><FONT COLOR="{c_eng}" POINT-SIZE="13"><B>{eng_title}</B></FONT></TD></TR>
-        <TR><TD><FONT COLOR="{c_th}" POINT-SIZE="10">{th_title}</FONT></TD></TR>
+        # 🌟 ปรับขนาดฟอนต์ให้ใหญ่ขึ้น (11, 15, 12) และเพิ่มช่องไฟ (CELLPADDING)
+        label = f'''<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="6">
+        <TR><TD><FONT COLOR="{c_num}" POINT-SIZE="11"><B>{stage_num}</B></FONT></TD></TR>
+        <TR><TD><FONT COLOR="{c_eng}" POINT-SIZE="15"><B>{eng_title}</B></FONT></TD></TR>
+        <TR><TD><FONT COLOR="{c_th}" POINT-SIZE="12">{th_title}</FONT></TD></TR>
         </TABLE>>'''
-        dot.node(node_id, label, shape='box', style='filled,rounded', color=c_box, fillcolor=f_box, penwidth=pw, margin='0.2,0.1')
+        dot.node(node_id, label, shape='box', style='filled,rounded', color=c_box, fillcolor=f_box, penwidth=pw, margin='0.25,0.15')
 
-    # อัปเดตข้อความให้ดูเป็นทางการและกระชับ
     create_stage_node('STAGE_01', 'STAGE 01', 'Draft SOR', 'จัดทำข้อกำหนดความต้องการ (SOR)')
     create_stage_node('STAGE_02', 'STAGE 02', 'Submit PR', 'สร้างใบขอซื้อ (PR) ในระบบ')
     create_stage_node('STAGE_03', 'STAGE 03', 'Issue RFQ / RFP', 'ออกเอกสารเชิญชวนเสนอราคา')
@@ -114,17 +116,15 @@ def generate_graph(active_node, layout_mode):
     create_stage_node('STAGE_10', 'STAGE 10', 'Payment', 'ดำเนินการจ่ายเงินตามเครดิต')
     create_stage_node('STAGE_11', 'STAGE 11', 'KPI & Closeout', 'ประเมินผลงานและปิดโครงการ')
 
-    # ปรับข้อความใน Decision
     decs = [
-        ('DEC_01', '<<FONT POINT-SIZE="11"><B>SOR &amp;<BR/>Budget<BR/>Approved?</B></FONT>>'), 
-        ('DEC_02', '<<FONT POINT-SIZE="11"><B>PR<BR/>Approved?</B></FONT>>'),
-        ('DEC_03', '<<FONT POINT-SIZE="11"><B>Technical<BR/>Pass<BR/>SOR?</B></FONT>>'), 
-        ('DEC_04', '<<FONT POINT-SIZE="11"><B>Inspection<BR/>on<BR/>FAT/SAT<BR/>Pass?</B></FONT>>')
+        ('DEC_01', '<<FONT POINT-SIZE="13"><B>SOR &amp;<BR/>Budget<BR/>Approved?</B></FONT>>'), 
+        ('DEC_02', '<<FONT POINT-SIZE="13"><B>PR<BR/>Approved?</B></FONT>>'),
+        ('DEC_03', '<<FONT POINT-SIZE="13"><B>Technical<BR/>Pass<BR/>SOR?</B></FONT>>'), 
+        ('DEC_04', '<<FONT POINT-SIZE="13"><B>Inspection<BR/>on<BR/>FAT/SAT<BR/>Pass?</B></FONT>>')
     ]
     for d_id, d_lbl in decs:
         dot.node(d_id, d_lbl, **get_node_style(d_id, '#F39C12', '#FEF9E7', 'diamond', 'filled'))
 
-    # ปรับข้อความ Exception
     excs = [
         ('EXC_01', 'Revise SOR / Budget', 'ทบทวนสเปก / ขอเพิ่มงบ'), 
         ('EXC_02', 'Return to Requester', 'ตีกลับ PR ให้ผู้ขอซื้อแก้ไข'),
@@ -136,9 +136,9 @@ def generate_graph(active_node, layout_mode):
         pw = '3' if is_active else '2'
         c = '#F39C12' if is_active else '#E74C3C'
         f = '#FEF9E7' if is_active else '#FDEDEC'
-        label = f'''<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="4">
-        <TR><TD><FONT COLOR="{c}" POINT-SIZE="11"><B>{e_title}</B></FONT></TD></TR>
-        <TR><TD><FONT COLOR="#C0392B" POINT-SIZE="10">{e_th}</FONT></TD></TR>
+        label = f'''<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="5">
+        <TR><TD><FONT COLOR="{c}" POINT-SIZE="12"><B>{e_title}</B></FONT></TD></TR>
+        <TR><TD><FONT COLOR="#C0392B" POINT-SIZE="11">{e_th}</FONT></TD></TR>
         </TABLE>>'''
         dot.node(e_id, label, shape='rect', style='filled,rounded,dashed', color=c, fillcolor=f, penwidth=pw)
 
@@ -217,7 +217,6 @@ def generate_excel():
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
         df.to_excel(writer, index=False, sheet_name='Procurement Process')
     return output.getvalue()
-
 
 # ==========================================
 # 5. ออกแบบ UI 
@@ -305,4 +304,8 @@ with st.sidebar:
     )
 
 # --- ส่วนของพื้นที่หลัก (MAIN AREA) ---
-st.graphviz_chart(generate_graph(current_node_id, layout_choice), use_container_width=True)
+# 🌟 จุดแก้ไขสำคัญ: ตั้งค่า use_container_width=False 
+# เพื่อไม่ให้ Streamlit บีบย่อกราฟจนอ่านไม่ออก ผู้ใช้จะสามารถเลื่อนจอ (Scroll) ดูได้
+st.markdown("<div style='overflow-x: auto;'>", unsafe_allow_html=True)
+st.graphviz_chart(generate_graph(current_node_id, layout_choice), use_container_width=False)
+st.markdown("</div>", unsafe_allow_html=True)
