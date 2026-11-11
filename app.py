@@ -11,7 +11,7 @@ st.set_page_config(page_title="Interactive Procurement Flow", layout="wide")
 st.markdown("""
 <div style='text-align: center; margin-bottom: 20px;'>
     <h2 style='color: #1B2631; margin-bottom: 5px; font-weight: bold;'>Interactive Procurement Flowchart</h2>
-    <p style='color: #7F8C8D; font-size: 16px;'>ระบบจำลองขั้นตอนการจัดซื้อจัดจ้าง พร้อมส่งออกข้อมูลกระบวนการสู่ Excel</p>
+    <p style='color: #7F8C8D; font-size: 16px;'>ระบบจำลองขั้นตอนการจัดซื้อจัดจ้าง</p>
 </div>
 """, unsafe_allow_html=True)
 
@@ -48,38 +48,13 @@ FLOW_DATA = {
     'END': {'title': 'สิ้นสุดกระบวนการ', 'desc': 'Procurement Cycle Completed', 'type': 'end'}
 }
 
-# กำหนด State เริ่มต้น
 if 'current_node' not in st.session_state:
     st.session_state.current_node = 'START'
 
 # ==========================================
-# 3. ฟังก์ชันสร้างไฟล์ Excel ในหน่วยความจำ (BytesIO)
+# 3. ฟังก์ชันวาดกราฟ (ถ้าส่ง None เข้ามา จะเป็นกราฟต้นฉบับไม่มีไฮไลท์)
 # ==========================================
-def generate_excel():
-    data = []
-    # แปลง Dictionary เป็น List เพื่อใส่ใน DataFrame
-    for node_id, info in FLOW_DATA.items():
-        data.append({
-            'Step ID': node_id,
-            'Step Type': info.get('type', '').upper(),
-            'Title (กระบวนการ)': info.get('title', ''),
-            'Description (รายละเอียด)': info.get('desc', ''),
-            'Next Step / Yes (ขั้นต่อไป / ผ่าน)': info.get('yes', info.get('next', '')),
-            'No / Exception (กรณีไม่ผ่าน)': info.get('no', '-')
-        })
-    
-    df = pd.DataFrame(data)
-    
-    # สร้างไฟล์ Excel ในหน่วยความจำ
-    output = io.BytesIO()
-    with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        df.to_excel(writer, index=False, sheet_name='Procurement Process')
-    return output.getvalue()
-
-# ==========================================
-# 4. ฟังก์ชันวาดกราฟ (รับค่าสถานะปัจจุบันเพื่อไฮไลท์)
-# ==========================================
-def generate_graph(active_node):
+def generate_graph(active_node=None):
     dot = graphviz.Digraph('ProcurementFlow', comment='Interactive Flow')
     dot.attr(rankdir='TB', splines='ortho', nodesep='0.4', ranksep='0.6')
     dot.attr('node', fontname='Tahoma, sans-serif')
@@ -140,13 +115,10 @@ def generate_graph(active_node):
 
     dot.edge('DEC_01', 'EXC_01', label='No', color='#E74C3C', fontcolor='#E74C3C')
     dot.edge('EXC_01', 'STAGE_01', style='dashed', constraint='false', color='#E74C3C')
-    
     dot.edge('DEC_02', 'EXC_02', label='No', color='#E74C3C', fontcolor='#E74C3C')
     dot.edge('EXC_02', 'STAGE_02', style='dashed', constraint='false', color='#E74C3C')
-    
     dot.edge('DEC_03', 'EXC_03', label='No', color='#E74C3C', fontcolor='#E74C3C')
     dot.edge('EXC_03', 'STAGE_04', style='dashed', constraint='false', color='#E74C3C')
-    
     dot.edge('DEC_04', 'EXC_04', label='No', color='#E74C3C', fontcolor='#E74C3C')
     dot.edge('EXC_04', 'STAGE_08', style='dashed', constraint='false', color='#E74C3C')
 
@@ -156,6 +128,26 @@ def generate_graph(active_node):
     dot.edge('DEC_04', 'STAGE_09', label='Yes', fontcolor='#2ECC71')
 
     return dot
+
+# ==========================================
+# 4. ฟังก์ชันสร้างไฟล์ Excel
+# ==========================================
+def generate_excel():
+    data = []
+    for node_id, info in FLOW_DATA.items():
+        data.append({
+            'Step ID': node_id,
+            'Step Type': info.get('type', '').upper(),
+            'Title (กระบวนการ)': info.get('title', ''),
+            'Description (รายละเอียด)': info.get('desc', ''),
+            'Next Step / Yes (ขั้นต่อไป / ผ่าน)': info.get('yes', info.get('next', '')),
+            'No / Exception (กรณีไม่ผ่าน)': info.get('no', '-')
+        })
+    df = pd.DataFrame(data)
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False, sheet_name='Procurement Process')
+    return output.getvalue()
 
 # ==========================================
 # 5. ออกแบบ UI (แบ่งซ้าย-ขวา)
@@ -176,9 +168,7 @@ with col2:
     
     st.markdown("---")
     
-    # ------------------------------------
     # ส่วนของปุ่มควบคุมกระบวนการ
-    # ------------------------------------
     node_type = node_info.get('type')
     
     if node_type == 'decision':
@@ -207,17 +197,22 @@ with col2:
     st.caption("หมายเหตุ: กล่องที่ถูกไฮไลท์ (สีเหลือง) คือขั้นตอนที่ระบบกำลังทำงานอยู่")
     
     st.markdown("---")
+    st.markdown("### 📥 ดาวน์โหลด")
     
-    # ------------------------------------
-    # ส่วนของการดาวน์โหลด Excel
-    # ------------------------------------
-    st.markdown("### 📥 ส่งออกข้อมูลกระบวนการ")
-    st.write("ดาวน์โหลดตารางกระบวนการทั้งหมดเพื่อนำไปประยุกต์ใช้ หรือแก้ไขต่อใน Excel")
+    # สร้างปุ่มดาวน์โหลดภาพกราฟ (PNG)
+    clean_graph = generate_graph(None) # ดึงภาพต้นฉบับ
+    png_data = clean_graph.pipe(format='png')
     
-    # ดึงค่า Bytes ของไฟล์ Excel
+    st.download_button(
+        label="🖼️ ดาวน์โหลดภาพ Flowchart (.png)",
+        data=png_data,
+        file_name="Procurement_Flowchart.png",
+        mime="image/png",
+        use_container_width=True
+    )
+    
+    # สร้างปุ่มดาวน์โหลดข้อมูลตาราง (Excel)
     excel_data = generate_excel()
-    
-    # สร้างปุ่มดาวน์โหลด
     st.download_button(
         label="📊 ดาวน์โหลด Process Table (.xlsx)",
         data=excel_data,
