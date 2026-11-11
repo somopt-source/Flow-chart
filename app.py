@@ -56,18 +56,18 @@ if 'current_node' not in st.session_state:
     st.session_state.current_node = 'START'
 
 # ==========================================
-# 3. ฟังก์ชันวาดกราฟ (จัดระเบียบขนาดและระยะห่าง)
+# 3. ฟังก์ชันวาดกราฟ (ควบคุมขนาดและสัดส่วนให้สมบูรณ์)
 # ==========================================
 def generate_graph(active_node, layout_mode):
     dot = graphviz.Digraph('ProcurementFlow', comment='Interactive Flow')
     
-    dot.attr(dpi='100')
+    dot.attr(dpi='120')
     
     if layout_mode == "แนวนอน (S-Curve)":
-        dot.attr(rankdir='TB', splines='ortho', nodesep='0.3', ranksep='0.4')
+        dot.attr(rankdir='TB', splines='ortho', nodesep='0.3', ranksep='0.4', size='16,10!', ratio='compress')
     else:
-        # แนวตั้ง: ปรับระยะห่าง ranksep ให้กระชับ ไม่ยาวเกินไป
-        dot.attr(rankdir='TB', splines='polyline', nodesep='0.3', ranksep='0.35')
+        # แนวตั้ง: ควบคุมขนาด size และ ratio เพื่อไม่ให้รูปยาวหลุดขอบ
+        dot.attr(rankdir='TB', splines='polyline', nodesep='0.3', ranksep='0.35', size='10,16!', ratio='compress')
         
     dot.attr('node', fontname='Segoe UI, Tahoma, Arial Unicode MS, sans-serif')
     dot.attr('edge', color='#BDC3C7', penwidth='2', fontname='Segoe UI, Tahoma', fontsize='9')
@@ -166,7 +166,7 @@ def generate_graph(active_node, layout_mode):
         dot.edge('STAGE_07', 'STAGE_08', weight='100')
 
     else:
-        # แนวตั้ง: จัดระเบียบให้อยู่ในแกนกลาง และจัดกล่อง No ให้อยู่ด้านข้างในระดับเดียวกัน
+        # แนวตั้ง: จัดกลุ่มให้อยู่ในระนาบเดียวกันอย่างเป็นระเบียบ
         with dot.subgraph() as r1:
             r1.attr(rank='same')
             r1.node('DEC_01')
@@ -320,11 +320,7 @@ with st.sidebar:
     )
 
 # --- ส่วนของพื้นที่หลัก (MAIN AREA) ---
-# 🌟 ครอบด้วย div ที่มี overflow-x: auto และตั้งค่าความกว้างต่ำสุดเฉพาะโหมดแนวนอน เพื่อให้เลื่อนดูได้ครบถ้วนโดยไม่ถูกตัดขอบ
-if layout_choice == "แนวนอน (S-Curve)":
-    st.markdown("<div style='overflow-x: auto; width: 100%;'>", unsafe_allow_html=True)
-    st.graphviz_chart(generate_graph(current_node_id, layout_choice), use_container_width=False)
-    st.markdown("</div>", unsafe_allow_html=True)
-else:
-    # โหมดแนวตั้ง แสดงผลพอดีหน้าจอแบบสมบูรณ์
-    st.graphviz_chart(generate_graph(current_node_id, layout_choice), use_container_width=True)
+# 🌟 ใช้ Scroll-Container ทั้งสองโหมด เพื่อป้องกันการตกขอบ และแสดงผลครบถ้วน 100%
+st.markdown("<div style='overflow: auto; width: 100%; border: 1px solid #E5E7EB; border-radius: 8px; padding: 10px; background-color: #FFFFFF;'>", unsafe_allow_html=True)
+st.graphviz_chart(generate_graph(current_node_id, layout_choice), use_container_width=False)
+st.markdown("</div>", unsafe_allow_html=True)
