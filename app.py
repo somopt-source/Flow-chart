@@ -73,4 +73,32 @@ with dot.subgraph() as s1:
     s1.attr(rank='same')
     s1.edge('START', 'STAGE_01')
     s1.edge('STAGE_01', 'DEC_01')
-    s1.edge('DEC_0
+    s1.edge('DEC_01', 'STAGE_02')
+    s1.edge('STAGE_02', 'DEC_02')
+    s1.edge('DEC_02', 'STAGE_03')
+
+# กลุ่มที่ 2: วิ่งจาก ขวา กลับมา ซ้าย (ใช้เทคนิค dir='back' เพื่อให้ลูกศรย้อนกลับ)
+with dot.subgraph() as s2:
+    s2.attr(rank='same')
+    s2.edge('STAGE_07', 'STAGE_06', dir='back')
+    s2.edge('STAGE_06', 'STAGE_05', dir='back')
+    s2.edge('STAGE_05', 'DEC_03', dir='back')
+    s2.edge('DEC_03', 'STAGE_04', dir='back')
+
+# กลุ่มที่ 3: วิ่งจาก ซ้าย ไป ขวา
+with dot.subgraph() as s3:
+    s3.attr(rank='same')
+    s3.edge('STAGE_08', 'DEC_04')
+    s3.edge('DEC_04', 'STAGE_09')
+    s3.edge('STAGE_09', 'STAGE_10')
+    s3.edge('STAGE_10', 'STAGE_11')
+    s3.edge('STAGE_11', 'END')
+
+# ทางเชื่อมระหว่างชั้นแนวตั้ง
+dot.edge('STAGE_03', 'STAGE_04', weight='100')
+dot.edge('STAGE_07', 'STAGE_08', weight='100')
+
+# ==========================================
+# 5. แสดงผลบน Streamlit
+# ==========================================
+st.graphviz_chart(dot, use_container_width=True)
