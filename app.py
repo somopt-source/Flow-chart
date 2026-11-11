@@ -14,8 +14,8 @@ st.set_page_config(
 
 st.markdown("""
 <div style='text-align: center; margin-bottom: 20px;'>
-    <h2 style='color: #1B2631; margin-bottom: 5px; font-weight: bold;'>Interactive Procurement Flowchart (SOR-to-Pay)</h2>
-    <p style='color: #7F8C8D; font-size: 16px;'>ระบบจำลองขั้นตอนการจัดซื้อจัดจ้าง สามารถปรับเปลี่ยนมุมมองได้</p>
+    <h2 style='color: #2C3E50; margin-bottom: 5px; font-weight: bold;'>Interactive Procurement Flowchart (SOR-to-Pay)</h2>
+    <p style='color: #7F8C8D; font-size: 16px;'>ระบบจำลองขั้นตอนการจัดซื้อจัดจ้าง (Professional View)</p>
 </div>
 """, unsafe_allow_html=True)
 
@@ -24,31 +24,31 @@ st.markdown("""
 # ==========================================
 FLOW_DATA = {
     'START': {'title': 'เริ่มต้น', 'type': 'start', 'next': 'STAGE_01'},
-    'STAGE_01': {'title': 'STAGE 01: Draft SOR', 'desc': 'หน่วยงานจัดทำข้อกำหนดความต้องการ (SOR) และงบประมาณ', 'type': 'stage', 'next': 'DEC_01'},
-    'DEC_01': {'title': 'ตรวจสอบ SOR & Budget', 'desc': 'สเปกและงบประมาณเหมาะสมหรือไม่?', 'type': 'decision', 'yes': 'STAGE_02', 'no': 'EXC_01'},
-    'EXC_01': {'title': 'ทบทวนสเปก/งบประมาณ', 'desc': 'ปรับปรุง SOR หรือขออนุมัติงบประมาณเพิ่มเติม', 'type': 'exception', 'next': 'STAGE_01'},
+    'STAGE_01': {'title': 'STAGE 01: Draft SOR', 'desc': 'หน่วยงานผู้ใช้จัดทำข้อกำหนดความต้องการ (SOR) และประเมินงบประมาณ', 'type': 'stage', 'next': 'DEC_01'},
+    'DEC_01': {'title': 'ตรวจสอบ SOR & Budget', 'desc': 'สเปกและงบประมาณเหมาะสมและได้รับการอนุมัติหรือไม่?', 'type': 'decision', 'yes': 'STAGE_02', 'no': 'EXC_01'},
+    'EXC_01': {'title': 'ทบทวนสเปก/งบประมาณ', 'desc': 'ปรับปรุง SOR หรือดำเนินการขออนุมัติงบประมาณเพิ่มเติม', 'type': 'exception', 'next': 'STAGE_01'},
     
-    'STAGE_02': {'title': 'STAGE 02: Submit PR', 'desc': 'เปิดใบขอซื้อ (PR) ในระบบ ERP', 'type': 'stage', 'next': 'DEC_02'},
-    'DEC_02': {'title': 'อนุมัติ PR', 'desc': 'ผู้มีอำนาจอนุมัติใบขอซื้อหรือไม่?', 'type': 'decision', 'yes': 'STAGE_03', 'no': 'EXC_02'},
-    'EXC_02': {'title': 'ตีกลับเพื่อแก้ไข PR', 'desc': 'ส่งคืนให้ผู้ขอซื้อแก้ไขข้อมูลในระบบ', 'type': 'exception', 'next': 'STAGE_02'},
+    'STAGE_02': {'title': 'STAGE 02: Submit PR', 'desc': 'สร้างและอนุมัติใบขอซื้อ (Purchase Requisition) ในระบบ', 'type': 'stage', 'next': 'DEC_02'},
+    'DEC_02': {'title': 'อนุมัติ PR', 'desc': 'ใบขอซื้อได้รับการอนุมัติตามสายงานบังคับบัญชาหรือไม่?', 'type': 'decision', 'yes': 'STAGE_03', 'no': 'EXC_02'},
+    'EXC_02': {'title': 'ตีกลับเพื่อแก้ไข PR', 'desc': 'ส่งคืนให้ผู้ขอซื้อแก้ไขข้อมูลในระบบให้ถูกต้อง', 'type': 'exception', 'next': 'STAGE_02'},
     
-    'STAGE_03': {'title': 'STAGE 03: Issue RFQ / RFP', 'desc': 'จัดซื้อส่งเอกสารเชิญชวนเสนอราคา/ประมูล', 'type': 'stage', 'next': 'STAGE_04'},
-    'STAGE_04': {'title': 'STAGE 04: Bids / Proposals', 'desc': 'ผู้ขายยื่นซองข้อเสนอทางเทคนิคและราคา', 'type': 'stage', 'next': 'DEC_03'},
+    'STAGE_03': {'title': 'STAGE 03: Issue RFQ / RFP', 'desc': 'ฝ่ายจัดซื้อออกเอกสารเชิญชวนเสนอราคา หรือจัดประมูล', 'type': 'stage', 'next': 'STAGE_04'},
+    'STAGE_04': {'title': 'STAGE 04: Bids / Proposals', 'desc': 'ผู้ขายยื่นซองข้อเสนอทางเทคนิคและข้อเสนอทางพาณิชย์', 'type': 'stage', 'next': 'DEC_03'},
     
-    'DEC_03': {'title': 'ตรวจสอบคุณสมบัติทางเทคนิค', 'desc': 'ผู้ขายผ่านเกณฑ์เทคนิคตาม SOR หรือไม่?', 'type': 'decision', 'yes': 'STAGE_05', 'no': 'EXC_03'},
-    'EXC_03': {'title': 'ตัดสิทธิ์ / ขอคำชี้แจง', 'desc': 'ตัดสิทธิ์ผู้เสนอราคา หรือขอเอกสารเพิ่มเติม', 'type': 'exception', 'next': 'STAGE_04'},
+    'DEC_03': {'title': 'ตรวจสอบคุณสมบัติทางเทคนิค', 'desc': 'ข้อเสนอของผู้ขายผ่านเกณฑ์เทคนิคตามที่ระบุใน SOR หรือไม่?', 'type': 'decision', 'yes': 'STAGE_05', 'no': 'EXC_03'},
+    'EXC_03': {'title': 'ตัดสิทธิ์ / ขอคำชี้แจง', 'desc': 'ตัดสิทธิ์ผู้เสนอราคา หรือขอให้ส่งเอกสารชี้แจงเพิ่มเติม', 'type': 'exception', 'next': 'STAGE_04'},
     
-    'STAGE_05': {'title': 'STAGE 05: Commercial Eval', 'desc': 'เปิดซองราคา เจรจาต่อรอง และสรุปผล', 'type': 'stage', 'next': 'STAGE_06'},
-    'STAGE_06': {'title': 'STAGE 06: Issue PO / Contract', 'desc': 'ออกใบสั่งซื้อหรือร่างสัญญา', 'type': 'stage', 'next': 'STAGE_07'},
-    'STAGE_07': {'title': 'STAGE 07: Signed Agreement', 'desc': 'คู่ค้าลงนามผูกพันตามสัญญา', 'type': 'stage', 'next': 'STAGE_08'},
-    'STAGE_08': {'title': 'STAGE 08: Execution & Delivery', 'desc': 'คู่ค้าดำเนินงานและส่งมอบตามงวด', 'type': 'stage', 'next': 'DEC_04'},
+    'STAGE_05': {'title': 'STAGE 05: Commercial Eval', 'desc': 'เปิดซองราคา ประเมินความคุ้มค่า และเจรจาต่อรอง', 'type': 'stage', 'next': 'STAGE_06'},
+    'STAGE_06': {'title': 'STAGE 06: Issue PO / Contract', 'desc': 'จัดทำและออกใบสั่งซื้อ (PO) หรือร่างสัญญาผูกพัน', 'type': 'stage', 'next': 'STAGE_07'},
+    'STAGE_07': {'title': 'STAGE 07: Signed Agreement', 'desc': 'คู่ค้าลงนามยอมรับเงื่อนไขและผูกพันตามสัญญา', 'type': 'stage', 'next': 'STAGE_08'},
+    'STAGE_08': {'title': 'STAGE 08: Execution & Delivery', 'desc': 'คู่ค้าดำเนินงานและส่งมอบสินค้า/บริการตามงวด', 'type': 'stage', 'next': 'DEC_04'},
     
-    'DEC_04': {'title': 'ตรวจรับงาน (FAT/SAT)', 'desc': 'ผลการตรวจรับผ่านตามเกณฑ์หรือไม่?', 'type': 'decision', 'yes': 'STAGE_09', 'no': 'EXC_04'},
-    'EXC_04': {'title': 'แจ้งแก้ไข / ปรับตามสัญญา', 'desc': 'ให้คู่ค้าแก้ไขงาน หรือดำเนินการปรับล่าช้า', 'type': 'exception', 'next': 'STAGE_08'},
+    'DEC_04': {'title': 'ตรวจรับงาน (FAT/SAT)', 'desc': 'ผลการส่งมอบและตรวจรับผ่านตามเกณฑ์หรือไม่?', 'type': 'decision', 'yes': 'STAGE_09', 'no': 'EXC_04'},
+    'EXC_04': {'title': 'แจ้งแก้ไข / ปรับตามสัญญา', 'desc': 'แจ้งให้คู่ค้าแก้ไขงานให้สมบูรณ์ หรือดำเนินการปรับตามเงื่อนไข', 'type': 'exception', 'next': 'STAGE_08'},
     
-    'STAGE_09': {'title': 'STAGE 09: 3-Way Matching', 'desc': 'บัญชีตรวจสอบ PO, ใบตรวจรับ และ Invoice', 'type': 'stage', 'next': 'STAGE_10'},
-    'STAGE_10': {'title': 'STAGE 10: Payment', 'desc': 'จ่ายเงินตามเครดิตเทอม', 'type': 'stage', 'next': 'STAGE_11'},
-    'STAGE_11': {'title': 'STAGE 11: KPI & Closeout', 'desc': 'ประเมินผลงานคู่ค้าและปิดโครงการ', 'type': 'stage', 'next': 'END'},
+    'STAGE_09': {'title': 'STAGE 09: 3-Way Matching', 'desc': 'ฝ่ายบัญชีกระทบยอดเอกสาร PO, ใบรับสินค้า (GR) และใบแจ้งหนี้ (Invoice)', 'type': 'stage', 'next': 'STAGE_10'},
+    'STAGE_10': {'title': 'STAGE 10: Payment', 'desc': 'ดำเนินการจ่ายเงินให้คู่ค้าตามรอบเครดิตเทอม', 'type': 'stage', 'next': 'STAGE_11'},
+    'STAGE_11': {'title': 'STAGE 11: KPI & Closeout', 'desc': 'ประเมินผลการทำงานของคู่ค้า (Vendor Eval) และปิดโครงการ', 'type': 'stage', 'next': 'END'},
     'END': {'title': 'สิ้นสุดกระบวนการ', 'desc': 'Procurement Cycle Completed', 'type': 'end'}
 }
 
@@ -56,160 +56,145 @@ if 'current_node' not in st.session_state:
     st.session_state.current_node = 'START'
 
 # ==========================================
-# 3. ฟังก์ชันวาดกราฟ (จัดระเบียบแนวตั้งใหม่ให้ตรงเป๊ะ)
+# 3. ฟังก์ชันวาดกราฟ (ปรับดีไซน์ข้อความใหม่ให้สบายตา)
 # ==========================================
 def generate_graph(active_node, layout_mode):
     dot = graphviz.Digraph('ProcurementFlow', comment='Interactive Flow')
-    dot.attr('node', fontname='Tahoma, Arial Unicode MS, sans-serif')
-    dot.attr('edge', color='#BDC3C7', penwidth='2', fontname='Tahoma', fontsize='10')
+    
+    if layout_mode == "แนวนอน (S-Curve)":
+        dot.attr(rankdir='TB', splines='ortho', nodesep='0.4', ranksep='0.6')
+    else:
+        dot.attr(rankdir='TB', splines='polyline', nodesep='0.5', ranksep='0.5')
+        
+    dot.attr('node', fontname='Segoe UI, Tahoma, Arial Unicode MS, sans-serif')
+    dot.attr('edge', color='#BDC3C7', penwidth='2', fontname='Segoe UI, Tahoma', fontsize='9')
 
     def get_node_style(node_id, base_color, fill_color, shape, style):
         is_active = (node_id == active_node)
         pw = '4' if is_active else '2'
-        c = '#F1C40F' if is_active else base_color
-        f = '#FCF3CF' if is_active else fill_color
+        c = '#F39C12' if is_active else base_color
+        f = '#FEF9E7' if is_active else fill_color
         return {'shape': shape, 'style': style, 'color': c, 'fillcolor': f, 'penwidth': pw}
 
-    dot.node('START', '<<B>START</B>>', **get_node_style('START', '#2ECC71', '#EAFAF1', 'box', 'filled,rounded'))
-    dot.node('END', '<<B>END</B>>', **get_node_style('END', '#E74C3C', '#FDEDEC', 'box', 'filled,rounded'))
+    dot.node('START', '<<B>START</B>>', **get_node_style('START', '#27AE60', '#EAFAF1', 'box', 'filled,rounded'))
+    dot.node('END', '<<B>END</B>>', **get_node_style('END', '#C0392B', '#FDEDEC', 'box', 'filled,rounded'))
 
     def create_stage_node(node_id, stage_num, eng_title, th_title):
         is_active = (node_id == active_node)
-        pw = '4' if is_active else '2.5'
-        c = '#F1C40F' if is_active else '#3498DB'
-        f = '#FCF3CF' if is_active else '#F4FAFF'
+        pw = '3.5' if is_active else '2'
+        c_box = '#F39C12' if is_active else '#3498DB'
+        f_box = '#FEF9E7' if is_active else '#F4FAFF'
+        
+        # สีฟอนต์ให้ดูเป็นมืออาชีพ
+        c_num = '#E67E22' if is_active else '#2980B9'
+        c_eng = '#2C3E50'
+        c_th = '#7F8C8D'
+        
         eng_title = eng_title.replace("&", "&amp;")
         th_title = th_title.replace("&", "&amp;")
-        label = f'''<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="2">
-        <TR><TD><FONT COLOR="{c}" POINT-SIZE="10"><B>{stage_num}</B></FONT></TD></TR>
-        <TR><TD><FONT POINT-SIZE="12" COLOR="#1C2833"><B>{eng_title}</B></FONT></TD></TR>
-        <TR><TD><FONT COLOR="#7F8C8D" POINT-SIZE="10">{th_title}</FONT></TD></TR>
+        
+        # ปรับ Padding และขนาด Font ให้สวยงาม (Hierarchy)
+        label = f'''<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="4">
+        <TR><TD><FONT COLOR="{c_num}" POINT-SIZE="9"><B>{stage_num}</B></FONT></TD></TR>
+        <TR><TD><FONT COLOR="{c_eng}" POINT-SIZE="13"><B>{eng_title}</B></FONT></TD></TR>
+        <TR><TD><FONT COLOR="{c_th}" POINT-SIZE="10">{th_title}</FONT></TD></TR>
         </TABLE>>'''
-        dot.node(node_id, label, shape='box', style='filled,rounded', color=c, fillcolor=f, penwidth=pw, margin='0.15')
+        dot.node(node_id, label, shape='box', style='filled,rounded', color=c_box, fillcolor=f_box, penwidth=pw, margin='0.2,0.1')
 
-    create_stage_node('STAGE_01', 'STAGE 01', 'Draft SOR', 'จัดทำข้อกำหนดความต้องการ')
-    create_stage_node('STAGE_02', 'STAGE 02', 'Submit PR', 'เปิดใบขอซื้อในระบบ ERP')
-    create_stage_node('STAGE_03', 'STAGE 03', 'Issue RFQ / RFP', 'ส่งเทียบราคา/ประมูลแนบ SOR')
-    create_stage_node('STAGE_04', 'STAGE 04', 'Bids / Proposals', 'ผู้ขายยื่นข้อเสนอเทคนิค+ราคา')
-    create_stage_node('STAGE_05', 'STAGE 05', 'Commercial Eval', 'เจรจาต่อรอง & สรุปราคา')
-    create_stage_node('STAGE_06', 'STAGE 06', 'Issue PO / Contract', 'ออกใบสั่งซื้อ/สัญญาตาม SOR')
+    # อัปเดตข้อความให้ดูเป็นทางการและกระชับ
+    create_stage_node('STAGE_01', 'STAGE 01', 'Draft SOR', 'จัดทำข้อกำหนดความต้องการ (SOR)')
+    create_stage_node('STAGE_02', 'STAGE 02', 'Submit PR', 'สร้างใบขอซื้อ (PR) ในระบบ')
+    create_stage_node('STAGE_03', 'STAGE 03', 'Issue RFQ / RFP', 'ออกเอกสารเชิญชวนเสนอราคา')
+    create_stage_node('STAGE_04', 'STAGE 04', 'Bids / Proposals', 'รับซองข้อเสนอเทคนิคและราคา')
+    create_stage_node('STAGE_05', 'STAGE 05', 'Commercial Eval', 'ประเมินราคาและเจรจาต่อรอง')
+    create_stage_node('STAGE_06', 'STAGE 06', 'Issue PO / Contract', 'ออกใบสั่งซื้อ / จัดทำสัญญา')
     create_stage_node('STAGE_07', 'STAGE 07', 'Signed Agreement', 'คู่ค้าลงนามผูกพันสัญญา')
-    create_stage_node('STAGE_08', 'STAGE 08', 'Execution & Delivery', 'ส่งมอบงานตามงวดใน SOR')
-    create_stage_node('STAGE_09', 'STAGE 09', '3-Way Matching', 'ตรวจ PO + ตรวจรับ + Invoice')
-    create_stage_node('STAGE_10', 'STAGE 10', 'Payment', 'จ่ายเงินตามงวด/เครดิตเทอม')
-    create_stage_node('STAGE_11', 'STAGE 11', 'KPI & Closeout', 'ประเมินผลงาน & ปิดโครงการ')
+    create_stage_node('STAGE_08', 'STAGE 08', 'Execution & Delivery', 'ดำเนินงานและส่งมอบตามงวด')
+    create_stage_node('STAGE_09', 'STAGE 09', '3-Way Matching', 'กระทบยอดเอกสาร (3-Way Match)')
+    create_stage_node('STAGE_10', 'STAGE 10', 'Payment', 'ดำเนินการจ่ายเงินตามเครดิต')
+    create_stage_node('STAGE_11', 'STAGE 11', 'KPI & Closeout', 'ประเมินผลงานและปิดโครงการ')
 
+    # ปรับข้อความใน Decision
     decs = [
-        ('DEC_01', '<<B>SOR &amp;<BR/>Budget<BR/>Approved?</B>>'), 
-        ('DEC_02', '<<B>PR<BR/>Approved?</B>>'),
-        ('DEC_03', '<<B>Technical<BR/>Pass<BR/>SOR?</B>>'), 
-        ('DEC_04', '<<B>Inspection<BR/>on<BR/>FAT/SAT<BR/>Pass?</B>>')
+        ('DEC_01', '<<FONT POINT-SIZE="11"><B>SOR &amp;<BR/>Budget<BR/>Approved?</B></FONT>>'), 
+        ('DEC_02', '<<FONT POINT-SIZE="11"><B>PR<BR/>Approved?</B></FONT>>'),
+        ('DEC_03', '<<FONT POINT-SIZE="11"><B>Technical<BR/>Pass<BR/>SOR?</B></FONT>>'), 
+        ('DEC_04', '<<FONT POINT-SIZE="11"><B>Inspection<BR/>on<BR/>FAT/SAT<BR/>Pass?</B></FONT>>')
     ]
     for d_id, d_lbl in decs:
         dot.node(d_id, d_lbl, **get_node_style(d_id, '#F39C12', '#FEF9E7', 'diamond', 'filled'))
 
+    # ปรับข้อความ Exception
     excs = [
-        ('EXC_01', 'Revise SOR', 'ทบทวนสเปก/ขอเพิ่มงบ'), 
-        ('EXC_02', 'Return to Requester', 'ตีกลับเพื่อแก้ไข PR'),
-        ('EXC_03', 'Disqualify / Clarify', 'ตัดสิทธิ์ / ขอคำชี้แจงเพิ่ม'), 
-        ('EXC_04', 'Rectify / Penalty', 'แจ้งแก้ไข / ปรับตามสัญญา')
+        ('EXC_01', 'Revise SOR / Budget', 'ทบทวนสเปก / ขอเพิ่มงบ'), 
+        ('EXC_02', 'Return to Requester', 'ตีกลับ PR ให้ผู้ขอซื้อแก้ไข'),
+        ('EXC_03', 'Disqualify / Clarify', 'ตัดสิทธิ์ / ขอเอกสารชี้แจง'), 
+        ('EXC_04', 'Rectify / Penalty', 'แจ้งแก้ไขงาน / ปรับตามสัญญา')
     ]
     for e_id, e_title, e_th in excs:
         is_active = (e_id == active_node)
-        pw = '4' if is_active else '2'
-        c = '#F1C40F' if is_active else '#E74C3C'
-        f = '#FCF3CF' if is_active else '#FDEDEC'
-        label = f'''<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="2">
+        pw = '3' if is_active else '2'
+        c = '#F39C12' if is_active else '#E74C3C'
+        f = '#FEF9E7' if is_active else '#FDEDEC'
+        label = f'''<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="4">
         <TR><TD><FONT COLOR="{c}" POINT-SIZE="11"><B>{e_title}</B></FONT></TD></TR>
-        <TR><TD><FONT COLOR="#E74C3C" POINT-SIZE="9">{e_th}</FONT></TD></TR>
+        <TR><TD><FONT COLOR="#C0392B" POINT-SIZE="10">{e_th}</FONT></TD></TR>
         </TABLE>>'''
         dot.node(e_id, label, shape='rect', style='filled,rounded,dashed', color=c, fillcolor=f, penwidth=pw)
 
-    # ==========================================
-    # ตรรกะการลากเส้น (แยกแนวนอน และ แนวตั้งชัดเจน)
-    # ==========================================
+    # ตรรกะการลากเส้น
     if layout_mode == "แนวนอน (S-Curve)":
-        dot.attr(rankdir='TB', splines='ortho', nodesep='0.4', ranksep='0.6')
-        
         with dot.subgraph() as s1:
             s1.attr(rank='same')
             s1.edges([('START', 'STAGE_01'), ('STAGE_01', 'DEC_01')])
-            s1.edge('DEC_01', 'STAGE_02', label=' Yes', fontcolor='#2ECC71')
+            s1.edge('DEC_01', 'STAGE_02', label=' Yes', fontcolor='#27AE60')
             s1.edges([('STAGE_02', 'DEC_02')])
-            s1.edge('DEC_02', 'STAGE_03', label=' Yes', fontcolor='#2ECC71')
+            s1.edge('DEC_02', 'STAGE_03', label=' Yes', fontcolor='#27AE60')
         
         with dot.subgraph() as s2:
             s2.attr(rank='same')
             s2.edge('STAGE_07', 'STAGE_06', dir='back')
             s2.edge('STAGE_06', 'STAGE_05', dir='back')
-            s2.edge('STAGE_05', 'DEC_03', dir='back', label=' Yes', fontcolor='#2ECC71')
+            s2.edge('STAGE_05', 'DEC_03', dir='back', label=' Yes', fontcolor='#27AE60')
             s2.edge('DEC_03', 'STAGE_04', dir='back')
 
         with dot.subgraph() as s3:
             s3.attr(rank='same')
             s3.edge('STAGE_08', 'DEC_04')
-            s3.edge('DEC_04', 'STAGE_09', label=' Yes', fontcolor='#2ECC71')
+            s3.edge('DEC_04', 'STAGE_09', label=' Yes', fontcolor='#27AE60')
             s3.edges([('STAGE_09', 'STAGE_10'), ('STAGE_10', 'STAGE_11'), ('STAGE_11', 'END')])
 
         dot.edge('STAGE_03', 'STAGE_04', weight='100')
         dot.edge('STAGE_07', 'STAGE_08', weight='100')
 
-        # เส้น No แนวนอน
-        dot.edge('DEC_01', 'EXC_01', label=' No', color='#E74C3C', fontcolor='#E74C3C', style='bold')
-        dot.edge('EXC_01', 'STAGE_01', style='dashed', constraint='false', color='#E74C3C')
-        dot.edge('DEC_02', 'EXC_02', label=' No', color='#E74C3C', fontcolor='#E74C3C', style='bold')
-        dot.edge('EXC_02', 'STAGE_02', style='dashed', constraint='false', color='#E74C3C')
-        dot.edge('DEC_03', 'EXC_03', label=' No', color='#E74C3C', fontcolor='#E74C3C', style='bold')
-        dot.edge('EXC_03', 'STAGE_04', style='dashed', constraint='false', color='#E74C3C')
-        dot.edge('DEC_04', 'EXC_04', label=' No', color='#E74C3C', fontcolor='#E74C3C', style='bold')
-        dot.edge('EXC_04', 'STAGE_08', style='dashed', constraint='false', color='#E74C3C')
-
     else:
-        # แนวตั้ง (Top-to-Bottom) แบบจัดระเบียบมืออาชีพ
-        dot.attr(rankdir='TB', splines='ortho', nodesep='0.8', ranksep='0.6')
-        
-        # 1. จัดกลุ่มให้อยู่บรรทัดเดียวกัน (บีบให้กล่อง No ไปอยู่ด้านขวาของ Diamond อย่างเป็นระเบียบ)
-        with dot.subgraph() as r1:
-            r1.attr(rank='same')
-            r1.node('DEC_01')
-            r1.node('EXC_01')
-        with dot.subgraph() as r2:
-            r2.attr(rank='same')
-            r2.node('DEC_02')
-            r2.node('EXC_02')
-        with dot.subgraph() as r3:
-            r3.attr(rank='same')
-            r3.node('DEC_03')
-            r3.node('EXC_03')
-        with dot.subgraph() as r4:
-            r4.attr(rank='same')
-            r4.node('DEC_04')
-            r4.node('EXC_04')
+        # แนวตั้ง
+        dot.edge('START', 'STAGE_01')
+        dot.edge('STAGE_01', 'DEC_01')
+        dot.edge('DEC_01', 'STAGE_02', label=' Yes', fontcolor='#27AE60')
+        dot.edge('STAGE_02', 'DEC_02')
+        dot.edge('DEC_02', 'STAGE_03', label=' Yes', fontcolor='#27AE60')
+        dot.edge('STAGE_03', 'STAGE_04')
+        dot.edge('STAGE_04', 'DEC_03')
+        dot.edge('DEC_03', 'STAGE_05', label=' Yes', fontcolor='#27AE60')
+        dot.edge('STAGE_05', 'STAGE_06')
+        dot.edge('STAGE_06', 'STAGE_07')
+        dot.edge('STAGE_07', 'STAGE_08')
+        dot.edge('STAGE_08', 'DEC_04')
+        dot.edge('DEC_04', 'STAGE_09', label=' Yes', fontcolor='#27AE60')
+        dot.edge('STAGE_09', 'STAGE_10')
+        dot.edge('STAGE_10', 'STAGE_11')
+        dot.edge('STAGE_11', 'END')
 
-        # 2. เส้นทางหลักแนวดิ่ง (ใส่ weight='10' เพื่อบังคับแกนกลางให้ตรงดิ่ง ไม่คดเคี้ยว)
-        main_path = [
-            'START', 'STAGE_01', 'DEC_01', 'STAGE_02', 'DEC_02', 'STAGE_03', 
-            'STAGE_04', 'DEC_03', 'STAGE_05', 'STAGE_06', 'STAGE_07', 'STAGE_08', 
-            'DEC_04', 'STAGE_09', 'STAGE_10', 'STAGE_11', 'END'
-        ]
-        for i in range(len(main_path)-1):
-            if main_path[i].startswith('DEC'):
-                dot.edge(main_path[i], main_path[i+1], label=' Yes', fontcolor='#2ECC71', weight='10')
-            else:
-                dot.edge(main_path[i], main_path[i+1], weight='10')
-
-        # 3. เส้นทางรอง Exception (ลากออกด้านข้างและวนกลับขึ้นไป)
-        dot.edge('DEC_01', 'EXC_01', label=' No', color='#E74C3C', fontcolor='#E74C3C', style='bold')
-        dot.edge('EXC_01', 'STAGE_01', style='dashed', constraint='false', color='#E74C3C')
-
-        dot.edge('DEC_02', 'EXC_02', label=' No', color='#E74C3C', fontcolor='#E74C3C', style='bold')
-        dot.edge('EXC_02', 'STAGE_02', style='dashed', constraint='false', color='#E74C3C')
-
-        dot.edge('DEC_03', 'EXC_03', label=' No', color='#E74C3C', fontcolor='#E74C3C', style='bold')
-        dot.edge('EXC_03', 'STAGE_04', style='dashed', constraint='false', color='#E74C3C')
-
-        dot.edge('DEC_04', 'EXC_04', label=' No', color='#E74C3C', fontcolor='#E74C3C', style='bold')
-        dot.edge('EXC_04', 'STAGE_08', style='dashed', constraint='false', color='#E74C3C')
+    # เส้นทาง Exception (No)
+    dot.edge('DEC_01', 'EXC_01', label=' No', color='#E74C3C', fontcolor='#E74C3C', style='bold')
+    dot.edge('EXC_01', 'STAGE_01', style='dashed', constraint='false', color='#E74C3C')
+    dot.edge('DEC_02', 'EXC_02', label=' No', color='#E74C3C', fontcolor='#E74C3C', style='bold')
+    dot.edge('EXC_02', 'STAGE_02', style='dashed', constraint='false', color='#E74C3C')
+    dot.edge('DEC_03', 'EXC_03', label=' No', color='#E74C3C', fontcolor='#E74C3C', style='bold')
+    dot.edge('EXC_03', 'STAGE_04', style='dashed', constraint='false', color='#E74C3C')
+    dot.edge('DEC_04', 'EXC_04', label=' No', color='#E74C3C', fontcolor='#E74C3C', style='bold')
+    dot.edge('EXC_04', 'STAGE_08', style='dashed', constraint='false', color='#E74C3C')
 
     return dot
 
@@ -235,13 +220,12 @@ def generate_excel():
 
 
 # ==========================================
-# 5. ออกแบบ UI (พื้นที่หลัก และ Sidebar)
+# 5. ออกแบบ UI 
 # ==========================================
 
 current_node_id = st.session_state.current_node
 node_info = FLOW_DATA.get(current_node_id, {})
 
-# --- รับค่ารูปแบบ Layout ขึ้นมาก่อน ---
 layout_choice = st.radio(
     "🔄 เลือกรูปแบบการแสดงผลกราฟ (Layout Mode):",
     options=["แนวนอน (S-Curve)", "แนวตั้ง (Top-to-Bottom)"],
@@ -258,7 +242,6 @@ with st.sidebar:
     
     st.markdown("---")
     
-    # ส่วนควบคุม Interactive
     node_type = node_info.get('type')
     if node_type == 'decision':
         st.write("**โปรดตัดสินใจ:**")
@@ -281,12 +264,11 @@ with st.sidebar:
             st.session_state.current_node = 'START'
             st.rerun()
 
-    st.caption("หมายเหตุ: กล่องที่ถูกไฮไลท์ (สีเหลือง) คือขั้นตอนที่ระบบกำลังทำงานอยู่")
+    st.caption("หมายเหตุ: กล่องที่ถูกไฮไลท์ (สีเหลือง/ส้ม) คือขั้นตอนที่ระบบกำลังทำงานอยู่")
     
     st.markdown("---")
     st.markdown("### 📥 ดาวน์โหลด")
     
-    # ดึงกราฟสำหรับดาวน์โหลด (อ้างอิงจาก layout ล่าสุด)
     clean_graph = generate_graph(None, layout_choice)
     
     try:
