@@ -14,13 +14,15 @@ st.markdown("""
 # 2. สร้าง Graph และตั้งค่าพื้นฐาน
 dot = graphviz.Digraph('ProcurementFlowchart', comment='SOR-to-Pay')
 dot.attr(rankdir='TB', splines='ortho', nodesep='0.5', ranksep='0.6')
-
-# ** สำคัญ: ตั้งค่าฟอนต์ให้รองรับภาษาไทยใน Graphviz **
 dot.attr('node', fontname='Tahoma, Arial Unicode MS, sans-serif')
 dot.attr('edge', color='#95A5A6', penwidth='3', arrowsize='0.8')
 
 # ฟังก์ชันช่วยสร้าง HTML Label สำหรับ STAGE ให้ดูสวยงาม
 def create_stage_node(node_id, stage_num, eng_title, th_title):
+    # ** จุดแก้ไขสำคัญ: ป้องกัน Error จากเครื่องหมาย & ใน Graphviz HTML Label **
+    eng_title = eng_title.replace("&", "&amp;")
+    th_title = th_title.replace("&", "&amp;")
+    
     label = f'''<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="2">
     <TR><TD><FONT COLOR="#3498DB" POINT-SIZE="10"><B>{stage_num}</B></FONT></TD></TR>
     <TR><TD><FONT POINT-SIZE="12" COLOR="#1C2833"><B>{eng_title}</B></FONT></TD></TR>
@@ -41,7 +43,8 @@ dot.node('END', '<<B>END</B>>', shape='box', style='filled,rounded',
 
 # แถวที่ 1
 create_stage_node('STAGE_01', 'STAGE 01', 'Draft SOR', 'จัดทำข้อกำหนดความต้องการ')
-dot.node('DEC_01', '<<B>SOR &<BR/>Budget<BR/>Approved?</B>>', shape='diamond', style='filled', 
+# แก้ไข & เป็น &amp;
+dot.node('DEC_01', '<<B>SOR &amp;<BR/>Budget<BR/>Approved?</B>>', shape='diamond', style='filled', 
          color='#F39C12', fillcolor='#FEF9E7', penwidth='2.5', fontcolor='#B9770E')
 create_stage_node('STAGE_02', 'STAGE 02', 'Submit PR', 'เปิดใบขอซื้อในระบบ ERP')
 dot.node('DEC_02', '<<B>PR<BR/>Approved?</B>>', shape='diamond', style='filled', 
@@ -77,7 +80,7 @@ with dot.subgraph() as s1:
     s1.edge('STAGE_02', 'DEC_02')
     s1.edge('DEC_02', 'STAGE_03')
 
-# กลุ่มที่ 2: วิ่งจาก ขวา กลับมา ซ้าย (ใช้เทคนิค dir='back' เพื่อให้ลูกศรย้อนกลับ)
+# กลุ่มที่ 2: วิ่งจาก ขวา กลับมา ซ้าย 
 with dot.subgraph() as s2:
     s2.attr(rank='same')
     s2.edge('STAGE_07', 'STAGE_06', dir='back')
@@ -94,7 +97,7 @@ with dot.subgraph() as s3:
     s3.edge('STAGE_10', 'STAGE_11')
     s3.edge('STAGE_11', 'END')
 
-# ทางเชื่อมระหว่างชั้นแนวตั้ง
+# ทางเชื่อมระหว่างชั้น
 dot.edge('STAGE_03', 'STAGE_04', weight='100')
 dot.edge('STAGE_07', 'STAGE_08', weight='100')
 
