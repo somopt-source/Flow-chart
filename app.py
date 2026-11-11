@@ -56,18 +56,18 @@ if 'current_node' not in st.session_state:
     st.session_state.current_node = 'START'
 
 # ==========================================
-# 3. ฟังก์ชันวาดกราฟ (จัดระเบียบขนาดและแนวตั้ง)
+# 3. ฟังก์ชันวาดกราฟ (จัดระเบียบขนาดและระยะห่าง)
 # ==========================================
 def generate_graph(active_node, layout_mode):
     dot = graphviz.Digraph('ProcurementFlow', comment='Interactive Flow')
     
-    dot.attr(dpi='120')
+    dot.attr(dpi='100')
     
     if layout_mode == "แนวนอน (S-Curve)":
         dot.attr(rankdir='TB', splines='ortho', nodesep='0.3', ranksep='0.4')
     else:
-        # แนวตั้ง: ปรับระยะห่างให้พอดี ไม่ยาวหรือห่างจนเกินไป
-        dot.attr(rankdir='TB', splines='polyline', nodesep='0.4', ranksep='0.4')
+        # แนวตั้ง: ปรับระยะห่าง ranksep ให้กระชับ ไม่ยาวเกินไป
+        dot.attr(rankdir='TB', splines='polyline', nodesep='0.3', ranksep='0.35')
         
     dot.attr('node', fontname='Segoe UI, Tahoma, Arial Unicode MS, sans-serif')
     dot.attr('edge', color='#BDC3C7', penwidth='2', fontname='Segoe UI, Tahoma', fontsize='9')
@@ -95,7 +95,6 @@ def generate_graph(active_node, layout_mode):
         eng_title = eng_title.replace("&", "&amp;")
         th_title = th_title.replace("&", "&amp;")
         
-        # 🌟 จัดกึ่งกลางด้วย ALIGN="CENTER" และปรับขนาดฟอนต์ให้พอดีตา (เล็กกำลังดี)
         label = f'''<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="2">
         <TR><TD ALIGN="CENTER"><FONT COLOR="{c_num}" POINT-SIZE="8"><B>{stage_num}</B></FONT></TD></TR>
         <TR><TD ALIGN="CENTER"><FONT COLOR="{c_eng}" POINT-SIZE="10"><B>{eng_title}</B></FONT></TD></TR>
@@ -321,4 +320,11 @@ with st.sidebar:
     )
 
 # --- ส่วนของพื้นที่หลัก (MAIN AREA) ---
-st.graphviz_chart(generate_graph(current_node_id, layout_choice), use_container_width=True)
+# 🌟 ครอบด้วย div ที่มี overflow-x: auto และตั้งค่าความกว้างต่ำสุดเฉพาะโหมดแนวนอน เพื่อให้เลื่อนดูได้ครบถ้วนโดยไม่ถูกตัดขอบ
+if layout_choice == "แนวนอน (S-Curve)":
+    st.markdown("<div style='overflow-x: auto; width: 100%;'>", unsafe_allow_html=True)
+    st.graphviz_chart(generate_graph(current_node_id, layout_choice), use_container_width=False)
+    st.markdown("</div>", unsafe_allow_html=True)
+else:
+    # โหมดแนวตั้ง แสดงผลพอดีหน้าจอแบบสมบูรณ์
+    st.graphviz_chart(generate_graph(current_node_id, layout_choice), use_container_width=True)
