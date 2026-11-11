@@ -56,17 +56,10 @@ if 'current_node' not in st.session_state:
     st.session_state.current_node = 'START'
 
 # ==========================================
-# 3. ฟังก์ชันวาดกราฟ (อัปเดตแก้บั๊ก Graphviz Crash)
+# 3. ฟังก์ชันวาดกราฟ (จัดระเบียบแนวตั้งใหม่ให้ตรงเป๊ะ)
 # ==========================================
 def generate_graph(active_node, layout_mode):
     dot = graphviz.Digraph('ProcurementFlow', comment='Interactive Flow')
-    
-    # 🌟 จุดแก้ไข: ใช้ 'polyline' สำหรับแนวตั้ง เพื่อป้องกัน Graphviz Engine คำนวณเส้นฉากพลาดจนเซิร์ฟเวอร์ Crash
-    if layout_mode == "แนวนอน (S-Curve)":
-        dot.attr(rankdir='TB', splines='ortho', nodesep='0.4', ranksep='0.6')
-    else:
-        dot.attr(rankdir='TB', splines='polyline', nodesep='0.5', ranksep='0.5')
-        
     dot.attr('node', fontname='Tahoma, Arial Unicode MS, sans-serif')
     dot.attr('edge', color='#BDC3C7', penwidth='2', fontname='Tahoma', fontsize='10')
 
@@ -85,10 +78,8 @@ def generate_graph(active_node, layout_mode):
         pw = '4' if is_active else '2.5'
         c = '#F1C40F' if is_active else '#3498DB'
         f = '#FCF3CF' if is_active else '#F4FAFF'
-        
         eng_title = eng_title.replace("&", "&amp;")
         th_title = th_title.replace("&", "&amp;")
-        
         label = f'''<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="2">
         <TR><TD><FONT COLOR="{c}" POINT-SIZE="10"><B>{stage_num}</B></FONT></TD></TR>
         <TR><TD><FONT POINT-SIZE="12" COLOR="#1C2833"><B>{eng_title}</B></FONT></TD></TR>
@@ -134,8 +125,12 @@ def generate_graph(active_node, layout_mode):
         </TABLE>>'''
         dot.node(e_id, label, shape='rect', style='filled,rounded,dashed', color=c, fillcolor=f, penwidth=pw)
 
-    # ตรรกะการลากเส้น
+    # ==========================================
+    # ตรรกะการลากเส้น (แยกแนวนอน และ แนวตั้งชัดเจน)
+    # ==========================================
     if layout_mode == "แนวนอน (S-Curve)":
+        dot.attr(rankdir='TB', splines='ortho', nodesep='0.4', ranksep='0.6')
+        
         with dot.subgraph() as s1:
             s1.attr(rank='same')
             s1.edges([('START', 'STAGE_01'), ('STAGE_01', 'DEC_01')])
@@ -159,34 +154,62 @@ def generate_graph(active_node, layout_mode):
         dot.edge('STAGE_03', 'STAGE_04', weight='100')
         dot.edge('STAGE_07', 'STAGE_08', weight='100')
 
-    else:
-        # แนวตั้ง
-        dot.edge('START', 'STAGE_01')
-        dot.edge('STAGE_01', 'DEC_01')
-        dot.edge('DEC_01', 'STAGE_02', label=' Yes', fontcolor='#2ECC71')
-        dot.edge('STAGE_02', 'DEC_02')
-        dot.edge('DEC_02', 'STAGE_03', label=' Yes', fontcolor='#2ECC71')
-        dot.edge('STAGE_03', 'STAGE_04')
-        dot.edge('STAGE_04', 'DEC_03')
-        dot.edge('DEC_03', 'STAGE_05', label=' Yes', fontcolor='#2ECC71')
-        dot.edge('STAGE_05', 'STAGE_06')
-        dot.edge('STAGE_06', 'STAGE_07')
-        dot.edge('STAGE_07', 'STAGE_08')
-        dot.edge('STAGE_08', 'DEC_04')
-        dot.edge('DEC_04', 'STAGE_09', label=' Yes', fontcolor='#2ECC71')
-        dot.edge('STAGE_09', 'STAGE_10')
-        dot.edge('STAGE_10', 'STAGE_11')
-        dot.edge('STAGE_11', 'END')
+        # เส้น No แนวนอน
+        dot.edge('DEC_01', 'EXC_01', label=' No', color='#E74C3C', fontcolor='#E74C3C', style='bold')
+        dot.edge('EXC_01', 'STAGE_01', style='dashed', constraint='false', color='#E74C3C')
+        dot.edge('DEC_02', 'EXC_02', label=' No', color='#E74C3C', fontcolor='#E74C3C', style='bold')
+        dot.edge('EXC_02', 'STAGE_02', style='dashed', constraint='false', color='#E74C3C')
+        dot.edge('DEC_03', 'EXC_03', label=' No', color='#E74C3C', fontcolor='#E74C3C', style='bold')
+        dot.edge('EXC_03', 'STAGE_04', style='dashed', constraint='false', color='#E74C3C')
+        dot.edge('DEC_04', 'EXC_04', label=' No', color='#E74C3C', fontcolor='#E74C3C', style='bold')
+        dot.edge('EXC_04', 'STAGE_08', style='dashed', constraint='false', color='#E74C3C')
 
-    # เส้นทาง Exception (No)
-    dot.edge('DEC_01', 'EXC_01', label=' No', color='#E74C3C', fontcolor='#E74C3C', style='bold')
-    dot.edge('EXC_01', 'STAGE_01', style='dashed', constraint='false', color='#E74C3C')
-    dot.edge('DEC_02', 'EXC_02', label=' No', color='#E74C3C', fontcolor='#E74C3C', style='bold')
-    dot.edge('EXC_02', 'STAGE_02', style='dashed', constraint='false', color='#E74C3C')
-    dot.edge('DEC_03', 'EXC_03', label=' No', color='#E74C3C', fontcolor='#E74C3C', style='bold')
-    dot.edge('EXC_03', 'STAGE_04', style='dashed', constraint='false', color='#E74C3C')
-    dot.edge('DEC_04', 'EXC_04', label=' No', color='#E74C3C', fontcolor='#E74C3C', style='bold')
-    dot.edge('EXC_04', 'STAGE_08', style='dashed', constraint='false', color='#E74C3C')
+    else:
+        # แนวตั้ง (Top-to-Bottom) แบบจัดระเบียบมืออาชีพ
+        dot.attr(rankdir='TB', splines='ortho', nodesep='0.8', ranksep='0.6')
+        
+        # 1. จัดกลุ่มให้อยู่บรรทัดเดียวกัน (บีบให้กล่อง No ไปอยู่ด้านขวาของ Diamond อย่างเป็นระเบียบ)
+        with dot.subgraph() as r1:
+            r1.attr(rank='same')
+            r1.node('DEC_01')
+            r1.node('EXC_01')
+        with dot.subgraph() as r2:
+            r2.attr(rank='same')
+            r2.node('DEC_02')
+            r2.node('EXC_02')
+        with dot.subgraph() as r3:
+            r3.attr(rank='same')
+            r3.node('DEC_03')
+            r3.node('EXC_03')
+        with dot.subgraph() as r4:
+            r4.attr(rank='same')
+            r4.node('DEC_04')
+            r4.node('EXC_04')
+
+        # 2. เส้นทางหลักแนวดิ่ง (ใส่ weight='10' เพื่อบังคับแกนกลางให้ตรงดิ่ง ไม่คดเคี้ยว)
+        main_path = [
+            'START', 'STAGE_01', 'DEC_01', 'STAGE_02', 'DEC_02', 'STAGE_03', 
+            'STAGE_04', 'DEC_03', 'STAGE_05', 'STAGE_06', 'STAGE_07', 'STAGE_08', 
+            'DEC_04', 'STAGE_09', 'STAGE_10', 'STAGE_11', 'END'
+        ]
+        for i in range(len(main_path)-1):
+            if main_path[i].startswith('DEC'):
+                dot.edge(main_path[i], main_path[i+1], label=' Yes', fontcolor='#2ECC71', weight='10')
+            else:
+                dot.edge(main_path[i], main_path[i+1], weight='10')
+
+        # 3. เส้นทางรอง Exception (ลากออกด้านข้างและวนกลับขึ้นไป)
+        dot.edge('DEC_01', 'EXC_01', label=' No', color='#E74C3C', fontcolor='#E74C3C', style='bold')
+        dot.edge('EXC_01', 'STAGE_01', style='dashed', constraint='false', color='#E74C3C')
+
+        dot.edge('DEC_02', 'EXC_02', label=' No', color='#E74C3C', fontcolor='#E74C3C', style='bold')
+        dot.edge('EXC_02', 'STAGE_02', style='dashed', constraint='false', color='#E74C3C')
+
+        dot.edge('DEC_03', 'EXC_03', label=' No', color='#E74C3C', fontcolor='#E74C3C', style='bold')
+        dot.edge('EXC_03', 'STAGE_04', style='dashed', constraint='false', color='#E74C3C')
+
+        dot.edge('DEC_04', 'EXC_04', label=' No', color='#E74C3C', fontcolor='#E74C3C', style='bold')
+        dot.edge('EXC_04', 'STAGE_08', style='dashed', constraint='false', color='#E74C3C')
 
     return dot
 
