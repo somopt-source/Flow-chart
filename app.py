@@ -10,8 +10,8 @@ st.set_page_config(page_title="Interactive Procurement Flow", layout="wide")
 
 st.markdown("""
 <div style='text-align: center; margin-bottom: 20px;'>
-    <h2 style='color: #1B2631; margin-bottom: 5px; font-weight: bold;'>Interactive Procurement Flowchart</h2>
-    <p style='color: #7F8C8D; font-size: 16px;'>ระบบจำลองขั้นตอนการจัดซื้อจัดจ้าง</p>
+    <h2 style='color: #1B2631; margin-bottom: 5px; font-weight: bold;'>Interactive Procurement Flowchart (SOR-to-Pay)</h2>
+    <p style='color: #7F8C8D; font-size: 16px;'>ระบบจำลองขั้นตอนการจัดซื้อจัดจ้าง พร้อมดาวน์โหลดไฟล์ SVG เพื่อนำไปแก้ไขใน Excel</p>
 </div>
 """, unsafe_allow_html=True)
 
@@ -52,12 +52,13 @@ if 'current_node' not in st.session_state:
     st.session_state.current_node = 'START'
 
 # ==========================================
-# 3. ฟังก์ชันวาดกราฟ (ถ้าส่ง None เข้ามา จะเป็นกราฟต้นฉบับไม่มีไฮไลท์)
+# 3. ฟังก์ชันวาดกราฟ (รับค่า Active Node เพื่อไฮไลท์ หรือ None เพื่อวาดภาพต้นฉบับ)
 # ==========================================
 def generate_graph(active_node=None):
     dot = graphviz.Digraph('ProcurementFlow', comment='Interactive Flow')
     dot.attr(rankdir='TB', splines='ortho', nodesep='0.4', ranksep='0.6')
-    dot.attr('node', fontname='Tahoma, sans-serif')
+    # กำหนดฟอนต์ให้รองรับภาษาไทย
+    dot.attr('node', fontname='Tahoma, Arial Unicode MS, sans-serif')
     dot.attr('edge', color='#BDC3C7', penwidth='2')
 
     def get_node_style(node_id, base_color, fill_color, shape, style):
@@ -67,34 +68,64 @@ def generate_graph(active_node=None):
         f = '#FCF3CF' if is_active else fill_color
         return {'shape': shape, 'style': style, 'color': c, 'fillcolor': f, 'penwidth': pw}
 
-    dot.node('START', 'START', **get_node_style('START', '#2ECC71', '#EAFAF1', 'box', 'filled,rounded'))
-    dot.node('END', 'END', **get_node_style('END', '#E74C3C', '#FDEDEC', 'box', 'filled,rounded'))
+    dot.node('START', '<<B>START</B>>', **get_node_style('START', '#2ECC71', '#EAFAF1', 'box', 'filled,rounded'))
+    dot.node('END', '<<B>END</B>>', **get_node_style('END', '#E74C3C', '#FDEDEC', 'box', 'filled,rounded'))
 
-    stages = [
-        ('STAGE_01', 'STAGE 01\nDraft SOR'), ('STAGE_02', 'STAGE 02\nSubmit PR'),
-        ('STAGE_03', 'STAGE 03\nIssue RFQ/RFP'), ('STAGE_04', 'STAGE 04\nBids/Proposals'),
-        ('STAGE_05', 'STAGE 05\nCommercial Eval'), ('STAGE_06', 'STAGE 06\nIssue PO/Contract'),
-        ('STAGE_07', 'STAGE 07\nSigned Agreement'), ('STAGE_08', 'STAGE 08\nExecution & Delivery'),
-        ('STAGE_09', 'STAGE 09\n3-Way Matching'), ('STAGE_10', 'STAGE 10\nPayment'),
-        ('STAGE_11', 'STAGE 11\nKPI & Closeout')
-    ]
-    for s_id, s_lbl in stages:
-        dot.node(s_id, s_lbl, **get_node_style(s_id, '#3498DB', '#F4FAFF', 'box', 'filled,rounded'))
+    def create_stage_node(node_id, stage_num, eng_title, th_title):
+        is_active = (node_id == active_node)
+        pw = '4' if is_active else '2.5'
+        c = '#F1C40F' if is_active else '#3498DB'
+        f = '#FCF3CF' if is_active else '#F4FAFF'
+        
+        eng_title = eng_title.replace("&", "&amp;")
+        th_title = th_title.replace("&", "&amp;")
+        
+        label = f'''<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="2">
+        <TR><TD><FONT COLOR="{c}" POINT-SIZE="10"><B>{stage_num}</B></FONT></TD></TR>
+        <TR><TD><FONT POINT-SIZE="12" COLOR="#1C2833"><B>{eng_title}</B></FONT></TD></TR>
+        <TR><TD><FONT COLOR="#7F8C8D" POINT-SIZE="10">{th_title}</FONT></TD></TR>
+        </TABLE>>'''
+        dot.node(node_id, label, shape='box', style='filled,rounded', color=c, fillcolor=f, penwidth=pw, margin='0.15')
+
+    create_stage_node('STAGE_01', 'STAGE 01', 'Draft SOR', 'จัดทำข้อกำหนดความต้องการ')
+    create_stage_node('STAGE_02', 'STAGE 02', 'Submit PR', 'เปิดใบขอซื้อในระบบ ERP')
+    create_stage_node('STAGE_03', 'STAGE 03', 'Issue RFQ / RFP', 'ส่งเทียบราคา/ประมูลแนบ SOR')
+    create_stage_node('STAGE_04', 'STAGE 04', 'Bids / Proposals', 'ผู้ขายยื่นข้อเสนอเทคนิค+ราคา')
+    create_stage_node('STAGE_05', 'STAGE 05', 'Commercial Eval', 'เจรจาต่อรอง & สรุปราคา')
+    create_stage_node('STAGE_06', 'STAGE 06', 'Issue PO / Contract', 'ออกใบสั่งซื้อ/สัญญาตาม SOR')
+    create_stage_node('STAGE_07', 'STAGE 07', 'Signed Agreement', 'คู่ค้าลงนามผูกพันสัญญา')
+    create_stage_node('STAGE_08', 'STAGE 08', 'Execution & Delivery', 'ส่งมอบงานตามงวดใน SOR')
+    create_stage_node('STAGE_09', 'STAGE 09', '3-Way Matching', 'ตรวจ PO + ตรวจรับ + Invoice')
+    create_stage_node('STAGE_10', 'STAGE 10', 'Payment', 'จ่ายเงินตามงวด/เครดิตเทอม')
+    create_stage_node('STAGE_11', 'STAGE 11', 'KPI & Closeout', 'ประเมินผลงาน & ปิดโครงการ')
 
     decs = [
-        ('DEC_01', 'SOR/Budget\nApproved?'), ('DEC_02', 'PR\nApproved?'),
-        ('DEC_03', 'Technical\nPass?'), ('DEC_04', 'Inspection\nPass?')
+        ('DEC_01', '<<B>SOR &amp;<BR/>Budget<BR/>Approved?</B>>'), 
+        ('DEC_02', '<<B>PR<BR/>Approved?</B>>'),
+        ('DEC_03', '<<B>Technical<BR/>Pass<BR/>SOR?</B>>'), 
+        ('DEC_04', '<<B>Inspection<BR/>on<BR/>FAT/SAT<BR/>Pass?</B>>')
     ]
     for d_id, d_lbl in decs:
         dot.node(d_id, d_lbl, **get_node_style(d_id, '#F39C12', '#FEF9E7', 'diamond', 'filled'))
 
     excs = [
-        ('EXC_01', 'Revise SOR'), ('EXC_02', 'Return PR'),
-        ('EXC_03', 'Disqualify'), ('EXC_04', 'Penalty/Rectify')
+        ('EXC_01', 'Revise SOR', 'ทบทวนสเปก/ขอเพิ่มงบ'), 
+        ('EXC_02', 'Return to Requester', 'ตีกลับเพื่อแก้ไข PR'),
+        ('EXC_03', 'Disqualify / Clarify', 'ตัดสิทธิ์ / ขอคำชี้แจงเพิ่ม'), 
+        ('EXC_04', 'Rectify / Penalty', 'แจ้งแก้ไข / ปรับตามสัญญา')
     ]
-    for e_id, e_lbl in excs:
-        dot.node(e_id, e_lbl, **get_node_style(e_id, '#E74C3C', '#FDEDEC', 'rect', 'filled,dashed'))
+    for e_id, e_title, e_th in excs:
+        is_active = (e_id == active_node)
+        pw = '4' if is_active else '2'
+        c = '#F1C40F' if is_active else '#E74C3C'
+        f = '#FCF3CF' if is_active else '#FDEDEC'
+        label = f'''<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="2">
+        <TR><TD><FONT COLOR="{c}" POINT-SIZE="11"><B>{e_title}</B></FONT></TD></TR>
+        <TR><TD><FONT COLOR="#E74C3C" POINT-SIZE="9">{e_th}</FONT></TD></TR>
+        </TABLE>>'''
+        dot.node(e_id, label, shape='rect', style='filled,rounded,dashed', color=c, fillcolor=f, penwidth=pw)
 
+    # จัดกลุ่มเส้นทางการไหล
     with dot.subgraph() as s1:
         s1.attr(rank='same')
         s1.edges([('START', 'STAGE_01'), ('STAGE_01', 'DEC_01'), ('DEC_01', 'STAGE_02'), ('STAGE_02', 'DEC_02'), ('DEC_02', 'STAGE_03')])
@@ -113,24 +144,29 @@ def generate_graph(active_node=None):
     dot.edge('STAGE_03', 'STAGE_04', weight='100')
     dot.edge('STAGE_07', 'STAGE_08', weight='100')
 
-    dot.edge('DEC_01', 'EXC_01', label='No', color='#E74C3C', fontcolor='#E74C3C')
+    # เส้นทาง Exception (No)
+    dot.edge('DEC_01', 'EXC_01', label=' No', color='#E74C3C', fontcolor='#E74C3C', style='bold')
     dot.edge('EXC_01', 'STAGE_01', style='dashed', constraint='false', color='#E74C3C')
-    dot.edge('DEC_02', 'EXC_02', label='No', color='#E74C3C', fontcolor='#E74C3C')
+    
+    dot.edge('DEC_02', 'EXC_02', label=' No', color='#E74C3C', fontcolor='#E74C3C', style='bold')
     dot.edge('EXC_02', 'STAGE_02', style='dashed', constraint='false', color='#E74C3C')
-    dot.edge('DEC_03', 'EXC_03', label='No', color='#E74C3C', fontcolor='#E74C3C')
+    
+    dot.edge('DEC_03', 'EXC_03', label=' No', color='#E74C3C', fontcolor='#E74C3C', style='bold')
     dot.edge('EXC_03', 'STAGE_04', style='dashed', constraint='false', color='#E74C3C')
-    dot.edge('DEC_04', 'EXC_04', label='No', color='#E74C3C', fontcolor='#E74C3C')
+    
+    dot.edge('DEC_04', 'EXC_04', label=' No', color='#E74C3C', fontcolor='#E74C3C', style='bold')
     dot.edge('EXC_04', 'STAGE_08', style='dashed', constraint='false', color='#E74C3C')
 
-    dot.edge('DEC_01', 'STAGE_02', label='Yes', fontcolor='#2ECC71')
-    dot.edge('DEC_02', 'STAGE_03', label='Yes', fontcolor='#2ECC71')
-    dot.edge('STAGE_05', 'DEC_03', dir='back', label='Yes', fontcolor='#2ECC71')
-    dot.edge('DEC_04', 'STAGE_09', label='Yes', fontcolor='#2ECC71')
+    # เส้นทางผ่าน (Yes)
+    dot.edge('DEC_01', 'STAGE_02', label=' Yes', fontcolor='#2ECC71')
+    dot.edge('DEC_02', 'STAGE_03', label=' Yes', fontcolor='#2ECC71')
+    dot.edge('STAGE_05', 'DEC_03', dir='back', label=' Yes', fontcolor='#2ECC71')
+    dot.edge('DEC_04', 'STAGE_09', label=' Yes', fontcolor='#2ECC71')
 
     return dot
 
 # ==========================================
-# 4. ฟังก์ชันสร้างไฟล์ Excel
+# 4. ฟังก์ชันสร้างไฟล์ Excel (.xlsx)
 # ==========================================
 def generate_excel():
     data = []
@@ -158,6 +194,7 @@ current_node_id = st.session_state.current_node
 node_info = FLOW_DATA.get(current_node_id, {})
 
 with col1:
+    # แสดงกราฟแบบมีไฮไลท์สถานะปัจจุบัน
     st.graphviz_chart(generate_graph(current_node_id), use_container_width=True)
 
 with col2:
@@ -168,7 +205,9 @@ with col2:
     
     st.markdown("---")
     
-    # ส่วนของปุ่มควบคุมกระบวนการ
+    # ------------------------------------
+    # ส่วนของปุ่มควบคุมกระบวนการ (Interactive)
+    # ------------------------------------
     node_type = node_info.get('type')
     
     if node_type == 'decision':
@@ -199,10 +238,11 @@ with col2:
     st.markdown("---")
     st.markdown("### 📥 ดาวน์โหลด")
     
-    # สร้างปุ่มดาวน์โหลดภาพกราฟ (PNG)
-    clean_graph = generate_graph(None) # ดึงภาพต้นฉบับ
-    png_data = clean_graph.pipe(format='png')
+    # ดึงกราฟแบบต้นฉบับ (ลบแถบสีเหลืองออก) สำหรับนำไปใช้งาน
+    clean_graph = generate_graph(None) 
     
+    # [ปุ่มที่ 1] ดาวน์โหลดภาพนิ่ง (PNG)
+    png_data = clean_graph.pipe(format='png')
     st.download_button(
         label="🖼️ ดาวน์โหลดภาพ Flowchart (.png)",
         data=png_data,
@@ -211,7 +251,17 @@ with col2:
         use_container_width=True
     )
     
-    # สร้างปุ่มดาวน์โหลดข้อมูลตาราง (Excel)
+    # [ปุ่มที่ 2] ดาวน์โหลดภาพเวกเตอร์ (SVG) - นำไปแปลงเป็น Shape ใน Excel
+    svg_data = clean_graph.pipe(format='svg')
+    st.download_button(
+        label="📐 ดาวน์โหลดภาพเวกเตอร์ (.svg) สำหรับแก้ใน Excel",
+        data=svg_data,
+        file_name="Procurement_Flowchart.svg",
+        mime="image/svg+xml",
+        use_container_width=True
+    )
+    
+    # [ปุ่มที่ 3] ดาวน์โหลดข้อมูลตาราง (Excel)
     excel_data = generate_excel()
     st.download_button(
         label="📊 ดาวน์โหลด Process Table (.xlsx)",
